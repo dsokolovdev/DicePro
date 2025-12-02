@@ -15,6 +15,7 @@ class DiceViewController: UIViewController {
         didSet {
             guard scoresView != nil else { return }
             scoresView.update(players: model.data.players, layout: currentLayout)
+            scoresView.updateLablesColors(activePlayer: playerSegmentedControl.selectedSegmentIndex)
         }
     }
     private var viewButton: UIBarButtonItem!
@@ -23,6 +24,8 @@ class DiceViewController: UIViewController {
     private var playerSegmentedControlBarView: UIView!
     private let dice1 = UIImageView()
     private let dice2 = UIImageView()
+    private let dice1Color = DiceModel.Dices.BlueGrey
+    private let dice2Color = DiceModel.Dices.WhiteBlue
     private var isTwoDices: Bool = true {
         didSet { dice2.isHidden = !isTwoDices}
     }
@@ -80,22 +83,26 @@ extension DiceViewController {
                 target: self,
                 action: #selector(openSettings)
             )
-            navigationItem.leftBarButtonItem = settingsButton
         }
         
         if viewButton == nil {
             viewButton = UIBarButtonItem(
                 image: UIImage(systemName: currentLayout.iconName),
-                menu: makeViewMenu())
-            navigationItem.rightBarButtonItem = viewButton
+                menu: makeViewMenu()
+            )
+            viewButton.tintColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
+        } else {
+            viewButton.image = UIImage(systemName: currentLayout.iconName)
+            viewButton.menu = makeViewMenu()
         }
         
-        
+        navigationItem.leftBarButtonItem = settingsButton
+        navigationItem.rightBarButtonItem = viewButton
         
     }
     
     func makeViewMenu() -> UIMenu {
-        let activeColor = UIColor.systemBlue
+        let activeColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
         let inactiveColor = UIColor.systemGray
         
         let rowImage = UIImage(systemName: "circle.grid.2x1.fill", withConfiguration: UIImage.SymbolConfiguration(paletteColors: [currentLayout == .row ? activeColor : inactiveColor]))
@@ -103,16 +110,20 @@ extension DiceViewController {
         
         let rowAction = UIAction(title: "Row", image: rowImage, state: currentLayout == .row ? .on : .off) { [weak self] _ in
             guard let self = self else { return }
-            self.currentLayout = .row
+            //self.currentLayout = .row
+            self.applyLayout(.row)
             self.viewButton.image = UIImage(systemName: LayoutType.row.iconName)
             self.viewButton.menu = self.makeViewMenu()
+            
         }
         
         let gridAction =  UIAction(title: "Grid", image: gridImage, state: currentLayout == .grid ? .on : .off) { [weak self] _ in
             guard let self = self else { return }
-            self.currentLayout = .grid
+            //self.currentLayout = .grid
+            self.applyLayout(.grid)
             self.viewButton.image = UIImage(systemName: LayoutType.grid.iconName)
             self.viewButton.menu = self.makeViewMenu()
+            
         }
         
         func attributedTitle(_ text: String, isActive: Bool) -> NSAttributedString {
@@ -126,7 +137,9 @@ extension DiceViewController {
     }
     
     func applyLayout(_ layout: LayoutType) {
-        self.currentLayout = layout
+        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            self.currentLayout = layout
+        }
     }
     
     func setupRollButton() {
@@ -139,7 +152,7 @@ extension DiceViewController {
                 attributes: AttributeContainer([ .font: UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold), .foregroundColor: UIColor.white])
             )
             rollButton.configuration = configuration
-            rollButton.backgroundColor = .blue
+            rollButton.backgroundColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
         } else {
             rollButton.setTitle("Roll", for: .normal)
             rollButton.titleLabel?.font = UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold)
@@ -193,7 +206,7 @@ extension DiceViewController {
         for (_,item) in model.data.players.enumerated() {
             items.append(item.name)
         }
-        let activeColor = UIColor.systemBlue
+        let activeColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
         let inactiveColor = UIColor.secondaryLabel
         let fontSize: CGFloat = 14 * scaleFactor
         let activeFont = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
@@ -252,8 +265,8 @@ extension DiceViewController {
         
         view.addSubview(diceStack)
         
-        dice1.image = UIImage(named: model.setBlackDice(scores: model.roll()))
-        dice2.image = UIImage(named: model.setBlueDice(scores: model.roll()))
+        dice1.image = UIImage(named: model.setDice(score: model.roll(), color: dice1Color))
+        dice2.image = UIImage(named: model.setDice(score: model.roll(), color: dice2Color))
         
         NSLayoutConstraint.activate([
             diceStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -301,7 +314,9 @@ extension DiceViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + secondsToDelayOpen) {
             //UIView.animate(withDuration: secondsToDelayClose, delay: 0.02) {
                 self.labelMessage.alpha = 1
+            UIView.transition(with: self.labelMessage, duration: 0.15, options: .transitionCrossDissolve) { [self] in
                 self.labelMessage.text = text
+            }
             //}
         }
         
@@ -317,8 +332,10 @@ extension DiceViewController {
         let roll2 = model.roll()
         var sum = 0
         var string = ""
-        dice1.image = UIImage(named: model.setBlackDice(scores: roll1))
-        dice2.image = UIImage(named: model.setBlueDice(scores: roll2))
+        UIView.transition(with: diceStack, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            dice1.image = UIImage(named: model.setDice(score: roll1, color: dice1Color))
+            dice2.image = UIImage(named: model.setDice(score: roll2, color: dice2Color))
+        }
         
         if isTwoDices {
             sum = roll1 + roll2 + 2
@@ -342,29 +359,21 @@ extension DiceViewController {
             model.data.players[i].isActive = false
         }
         
-        scoresView.updateData(players: model.data.players)
+        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            scoresView.updateData(players: model.data.players)
+        }
         
         popUpMessage(text: string)
-        
-        print("""
-            ***
-            Name: \(currentPlayer.name)
-            Current Score: \(currentPlayer.currentScore)
-            Total Scoree: \(currentPlayer.totalScore)
-            Attampts: \(currentPlayer.attempts)
-            isActive: \(currentPlayer.isActive)
-            """)
-        
-        
     }
     
     private func startRollingAnimation() {
         holdStartTime = Date()
+        hasFinalizedRoll = false
         
         rollAnimationTimer?.invalidate()
         rollAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.dice1.image = UIImage(named: self?.model.setBlackDice(scores: self?.model.roll() ?? 0) ?? "")
-            self?.dice2.image = UIImage(named: self?.model.setBlueDice(scores: self?.model.roll() ?? 0) ?? "")
+            self?.dice1.image = UIImage(named: self?.model.setDice(score: self?.model.roll() ?? 0, color: self?.dice1Color ?? .blackRed) ?? "")
+            self?.dice2.image = UIImage(named: self?.model.setDice(score: self?.model.roll() ?? 0, color: self?.dice2Color ?? .WhiteBlue) ?? "")
         }
         
         // контроль максимальных 5 секунд
@@ -375,6 +384,7 @@ extension DiceViewController {
             let elapsed = Date().timeIntervalSince(self.holdStartTime ?? Date())
             
             if elapsed >= self.maxHoldTime {
+                hasFinalizedRoll = true
                 self.finishRollingAnimation()
             }
         }
@@ -388,8 +398,8 @@ extension DiceViewController {
         let r1 = model.roll()
         let r2 = model.roll()
 
-        dice1.image = UIImage(named: model.setBlackDice(scores: r1))
-        dice2.image = UIImage(named: model.setBlueDice(scores: r2))
+        dice1.image = UIImage(named: model.setDice(score: r1, color: dice1Color))
+        dice2.image = UIImage(named: model.setDice(score: r2, color: dice2Color))
 
         let sum = (isTwoDices ? r1 + r2 + 2 : r1 + 1)
         popUpMessage(text: "+\(sum)")
@@ -422,6 +432,7 @@ extension DiceViewController {
     }
     
     @objc func playerChanged() {
+        
         let index = playerSegmentedControl.selectedSegmentIndex
         
         // сбрасываем активность у всех
@@ -429,7 +440,11 @@ extension DiceViewController {
             model.data.players[i].isActive = (i == index)
         }
         
-        scoresView.updateData(players: model.data.players)
+        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            scoresView.updateData(players: model.data.players)
+            scoresView.updateLablesColors(activePlayer: index)
+        }
+        
     }
     
     @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
@@ -438,6 +453,7 @@ extension DiceViewController {
             startRollingAnimation()
             
         case .ended, .cancelled, .failed:
+            guard !hasFinalizedRoll else { return }
             finishRollingAnimation()
             
         default:
@@ -445,4 +461,3 @@ extension DiceViewController {
         }
     }
 }
-

@@ -64,7 +64,7 @@ final class ScoresView: UIView {
 }
 
 // MARK: - Private UI Builders
-private extension ScoresView {
+ extension ScoresView {
 
     func createLabel(alignment: NSTextAlignment) -> UILabel {
         let lbl = UILabel()
@@ -117,13 +117,13 @@ private extension ScoresView {
             let rank = createLabel(alignment: .right)
             let score = createLabel(alignment: .right)
             
-            attempts.textColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00) //red
-            rank.textColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00) //gold
-            score.textColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
-            
-            attempts.font = .systemFont(ofSize: 40, weight: .medium)
-            rank.font = .systemFont(ofSize: 40, weight: .medium)
-            score.font = .systemFont(ofSize: 50, weight: .medium)
+//            attempts.textColor = .secondaryLabel//UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00) //red
+//            rank.textColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00) //gold
+//            score.textColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
+//            
+//            attempts.font = .systemFont(ofSize: 40, weight: .medium)
+//            rank.font = .systemFont(ofSize: 40, weight: .medium)
+//            score.font = .systemFont(ofSize: 50, weight: .medium)
 
             labels[0].append(contentsOf: [attempts, rank, score])
 
@@ -143,13 +143,13 @@ private extension ScoresView {
                 let score = createLabel(alignment: .right)
                 let rank = createLabel(alignment: .right)
                 
-                attempts.textColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00) //red
-                rank.textColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00) //gold
-                score.textColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
-                
-                attempts.font = .systemFont(ofSize: 40, weight: .medium)
-                rank.font = .systemFont(ofSize: 40, weight: .medium)
-                score.font = .systemFont(ofSize: 40, weight: .medium)
+//                attempts.textColor = .secondaryLabel//UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00) //red
+//                rank.textColor = .tertiaryLabel//UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00) //gold
+//                score.textColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
+//                
+//                attempts.font = .systemFont(ofSize: 40, weight: .medium)
+//                rank.font = .systemFont(ofSize: 40, weight: .medium)
+//                score.font = .systemFont(ofSize: 40, weight: .medium)
                 
                 rank.widthAnchor.constraint(equalToConstant: 60).isActive = true
 
@@ -161,5 +161,45 @@ private extension ScoresView {
         }
         
         updateData(players: players)
+        updateLablesColors()
+    }
+    
+    func updateLablesColors(activePlayer: Int? = nil) {
+        let attemptColor: UIColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00).withAlphaComponent(0.4) //red
+        let rankColor: UIColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00).withAlphaComponent(0.4) //gold
+        let scoreColor: UIColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
+        
+        let attemptFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 40, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
+        let rankFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 40, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
+        let scoreFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 50, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
+        
+        if currentLayout == .row {
+            for (_,label) in labels.enumerated() {
+                label[0].textColor = attemptColor
+                label[2].textColor = scoreColor
+                label[1].textColor = rankColor
+                
+                label[0].font = attemptFont
+                label[2].font = scoreFont
+                label[1].font = rankFont
+            }
+        } else {
+            for (index, label) in labels.enumerated() {
+                if index == (activePlayer ?? 0) {
+                    label[0].textColor = attemptColor
+                    label[1].textColor = scoreColor
+                    label[2].textColor = rankColor
+                } else {
+                    label[0].textColor = .tertiaryLabel
+                    label[1].textColor = .tertiaryLabel
+                    label[2].textColor = .tertiaryLabel
+                }
+                
+                label[0].font = attemptFont
+                label[1].font = scoreFont
+                label[2].font = rankFont
+            }
+        }
     }
 }
+
