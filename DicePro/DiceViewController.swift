@@ -8,14 +8,59 @@
 import UIKit
 
 class DiceViewController: UIViewController {
-    var model = DiceModel()
+    private var model: DiceModel
+    private var scoresView: ScoresView!
     
-    var rollBar: UIToolbar!
+    private var currentLayout: LayoutType = .row {
+        didSet {
+            guard scoresView != nil else { return }
+            scoresView.update(players: model.data.players, layout: currentLayout)
+        }
+    }
+    private var viewButton: UIBarButtonItem!
+    private var settingsButton: UIBarButtonItem!
+    private var playerSegmentedControl: UISegmentedControl!
+    private var playerSegmentedControlBarView: UIView!
+    private let dice1 = UIImageView()
+    private let dice2 = UIImageView()
+    private var isTwoDices: Bool = true {
+        didSet { dice2.isHidden = !isTwoDices}
+    }
+    private var rollButton: UIButton!
+    private var rollBar: UIToolbar!
+    private var diceStack: UIStackView!
+    private var messageStack: UIStackView!
+    private var labelMessage: UILabel!
+    
+    private var rollAnimationTimer: Timer?
+    private var holdStartTime: Date?
+    private var holdDurationTimer: Timer?
+    private let maxHoldTime: TimeInterval = 7
+    private var hasFinalizedRoll = false
+    
+    init(model: DiceModel) {
+        self.model = model
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        let model = DiceModel()       // создаём дефолтную модель
+        self.model = model
+        super.init(coder: coder)
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupNavigationBar()
+        setupSegmentedContol()
+        setupScoresView()
         setupRollButton()
+        setupDiceStack()
+        setupLabelMessage()
         
+        scoresView.update(players: model.data.players, layout: currentLayout)
         
+        view.backgroundColor = .systemBackground
         view.preservesSuperviewLayoutMargins = true
         let constant: CGFloat = 16 * scaleFactor
         view.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 0, leading: constant, bottom: 0, trailing: constant)
@@ -26,30 +71,378 @@ class DiceViewController: UIViewController {
 
 extension DiceViewController {
     //MARK: Setup UI
+    func setupNavigationBar() {
+        
+        if settingsButton == nil {
+            settingsButton = UIBarButtonItem(
+                image: UIImage(systemName: "gearshape"),
+                style: .plain,
+                target: self,
+                action: #selector(openSettings)
+            )
+            navigationItem.leftBarButtonItem = settingsButton
+        }
+        
+        if viewButton == nil {
+            viewButton = UIBarButtonItem(
+                image: UIImage(systemName: currentLayout.iconName),
+                menu: makeViewMenu())
+            navigationItem.rightBarButtonItem = viewButton
+        }
+        
+        
+        
+    }
+    
+    func makeViewMenu() -> UIMenu {
+        let activeColor = UIColor.systemBlue
+        let inactiveColor = UIColor.systemGray
+        
+        let rowImage = UIImage(systemName: "circle.grid.2x1.fill", withConfiguration: UIImage.SymbolConfiguration(paletteColors: [currentLayout == .row ? activeColor : inactiveColor]))
+        let gridImage = UIImage(systemName: "circle.grid.3x3.fill", withConfiguration: UIImage.SymbolConfiguration(paletteColors: [currentLayout == .grid ? activeColor : inactiveColor]))
+        
+        let rowAction = UIAction(title: "Row", image: rowImage, state: currentLayout == .row ? .on : .off) { [weak self] _ in
+            guard let self = self else { return }
+            self.currentLayout = .row
+            self.viewButton.image = UIImage(systemName: LayoutType.row.iconName)
+            self.viewButton.menu = self.makeViewMenu()
+        }
+        
+        let gridAction =  UIAction(title: "Grid", image: gridImage, state: currentLayout == .grid ? .on : .off) { [weak self] _ in
+            guard let self = self else { return }
+            self.currentLayout = .grid
+            self.viewButton.image = UIImage(systemName: LayoutType.grid.iconName)
+            self.viewButton.menu = self.makeViewMenu()
+        }
+        
+        func attributedTitle(_ text: String, isActive: Bool) -> NSAttributedString {
+            NSAttributedString(string: text, attributes: [.foregroundColor: isActive ? activeColor : inactiveColor])
+        }
+        
+        rowAction.setValue(attributedTitle("Row", isActive: currentLayout == .row), forKey: "attributedTitle")
+        gridAction.setValue(attributedTitle("Grid", isActive: currentLayout == .grid), forKey: "attributedTitle")
+        
+        return UIMenu(title: "View Mode", children: [rowAction, gridAction])
+    }
+    
+    func applyLayout(_ layout: LayoutType) {
+        self.currentLayout = layout
+    }
+    
     func setupRollButton() {
-        let rollButton = UIBarButtonItem(title: " Roll ", style: .plain, target: self, action: #selector(rollButtonTapped))
+        rollButton = UIButton(type: .system)
         
-        rollBar = UIToolbar()
-        let space = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        rollBar.items = [space, rollButton, space]
+        if #available(iOS 26.0, *) {
+            var configuration = UIButton.Configuration.glass()
+            configuration.attributedTitle = AttributedString(
+                "Roll",
+                attributes: AttributeContainer([ .font: UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold), .foregroundColor: UIColor.white])
+            )
+            rollButton.configuration = configuration
+            rollButton.backgroundColor = .blue
+        } else {
+            rollButton.setTitle("Roll", for: .normal)
+            rollButton.titleLabel?.font = UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold)
+            rollButton.setTitleColor(.white, for: .normal)
+            rollButton.backgroundColor = .systemBlue.withAlphaComponent(0.8)
+            
+            rollButton.layer.cornerRadius = 32 * scaleFactor
+            rollButton.layer.shadowColor = UIColor.label.cgColor
+            rollButton.layer.shadowOpacity = 0.05
+            rollButton.layer.shadowRadius = 4
+            rollButton.layer.shadowOffset = CGSize(width: 0, height: 2.5)
+            rollButton.layer.masksToBounds = false
+        }
         
-        rollBar.transform = CGAffineTransform(scaleX: scaleFactor, y: scaleFactor)
         
-        view.addSubview(rollBar)
+        rollButton.addTarget(self, action: #selector(rollButtonTapped), for: .touchUpInside)
         
-        rollBar.translatesAutoresizingMaskIntoConstraints = false
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.2   // небольшая задержка
+        rollButton.addGestureRecognizer(longPress)
+        
+        view.addSubview(rollButton)
+        
+        rollButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            rollBar.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -150 * scaleFactor),
-            rollBar.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
-            rollBar.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor)
+            rollButton.widthAnchor.constraint(equalToConstant: 135 * scaleFactor),
+            rollButton.heightAnchor.constraint(equalToConstant: 64 * scaleFactor),
+            rollButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            rollButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -120 * scaleFactor)
+        ])
+        
+        
+        
+    }
+    
+    func setupSegmentedContol() {
+        playerSegmentedControlBarView = UIView()
+        playerSegmentedControlBarView.translatesAutoresizingMaskIntoConstraints = false
+        playerSegmentedControlBarView.backgroundColor = .systemBackground
+        playerSegmentedControlBarView.layer.cornerRadius = 20 * scaleFactor
+        
+        view.addSubview(playerSegmentedControlBarView)
+        
+        playerSegmentedControlBarView.layer.shadowColor = UIColor.label.cgColor
+        playerSegmentedControlBarView.layer.shadowOpacity = 0.05
+        playerSegmentedControlBarView.layer.shadowOffset = CGSize(width: 0, height: 2.5)
+        playerSegmentedControlBarView.layer.shadowRadius = 4
+        playerSegmentedControlBarView.layer.masksToBounds = false
+        
+        var items: [String] = []
+        for (_,item) in model.data.players.enumerated() {
+            items.append(item.name)
+        }
+        let activeColor = UIColor.systemBlue
+        let inactiveColor = UIColor.secondaryLabel
+        let fontSize: CGFloat = 14 * scaleFactor
+        let activeFont = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
+        let inactiveFont = UIFont.systemFont(ofSize: fontSize, weight: .medium)
+        
+        playerSegmentedControl = UISegmentedControl(items: items)
+        playerSegmentedControl.selectedSegmentIndex =  0
+        playerSegmentedControl.translatesAutoresizingMaskIntoConstraints = false
+        playerSegmentedControl.selectedSegmentTintColor = .systemGray6
+        playerSegmentedControl.setTitleTextAttributes([.foregroundColor: inactiveColor, .font: inactiveFont], for: .normal)
+        playerSegmentedControl.setTitleTextAttributes([.foregroundColor: activeColor, .font: activeFont], for: .selected)
+        playerSegmentedControl.subviews.forEach { $0.backgroundColor = .systemBackground }
+        playerSegmentedControl.addTarget(self, action: #selector(playerChanged), for: .valueChanged)
+        
+        playerSegmentedControlBarView.addSubview(playerSegmentedControl)
+        
+        let scHeight: CGFloat = 32 * scaleFactor
+        let constant: CGFloat = 3 * scaleFactor
+        let barHeigh: CGFloat = 38 * scaleFactor
+        NSLayoutConstraint.activate([
+            playerSegmentedControlBarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            playerSegmentedControlBarView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+            playerSegmentedControlBarView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
+            playerSegmentedControlBarView.heightAnchor.constraint(equalToConstant: barHeigh),
+            
+            playerSegmentedControl.centerYAnchor.constraint(equalTo: playerSegmentedControlBarView.centerYAnchor),
+            playerSegmentedControl.leadingAnchor.constraint(equalTo: playerSegmentedControlBarView.leadingAnchor, constant: constant),
+            playerSegmentedControl.trailingAnchor.constraint(equalTo: playerSegmentedControlBarView.trailingAnchor, constant: -constant),
+            playerSegmentedControl.heightAnchor.constraint(equalToConstant: scHeight)
         ])
     }
     
-    //MARK: Actions
+    func setupScoresView() {
+        scoresView = ScoresView()
+        scoresView.translatesAutoresizingMaskIntoConstraints = false
+        scoresView.layer.masksToBounds = false
+        view.addSubview(scoresView)
+        
+        NSLayoutConstraint.activate([
+            scoresView.topAnchor.constraint(equalTo: playerSegmentedControlBarView.bottomAnchor, constant: 8),
+            scoresView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
+            scoresView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
+            scoresView.heightAnchor.constraint(equalToConstant: 150 * scaleFactor)
+        ])
+        
+        
+    }
+    
+    func setupDiceStack() {
+        let diceArray = isTwoDices ? [dice1, dice2] : [dice1]
+        diceStack = UIStackView(arrangedSubviews: diceArray)
+        diceStack.translatesAutoresizingMaskIntoConstraints = false
+        diceStack.axis = .horizontal
+        diceStack.spacing = 16
+        diceStack.distribution = .fillEqually
+        
+        view.addSubview(diceStack)
+        
+        dice1.image = UIImage(named: model.setBlackDice(scores: model.roll()))
+        dice2.image = UIImage(named: model.setBlueDice(scores: model.roll()))
+        
+        NSLayoutConstraint.activate([
+            diceStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            diceStack.bottomAnchor.constraint(equalTo: rollButton.topAnchor, constant: -90 * scaleFactor)
+        ])
+    }
+    
+    func setupLabelMessage () {
+        labelMessage = UILabel()
+        labelMessage.text  = ""
+        labelMessage.textColor = .secondaryLabel
+        labelMessage.backgroundColor = UIColor.systemGray6
+        labelMessage.textAlignment = .center
+        labelMessage.font = UIFont.systemFont(ofSize: 18 * scaleFactor, weight: .medium)
+        
+        labelMessage.layer.cornerRadius = 20
+        labelMessage.layer.masksToBounds = true
+        labelMessage.alpha = 0
+        
+        labelMessage.translatesAutoresizingMaskIntoConstraints = false
+        
+        messageStack = UIStackView()
+        messageStack.translatesAutoresizingMaskIntoConstraints = false
+        messageStack.axis = .horizontal
+        messageStack.alignment = .center
+        messageStack.spacing = 1
+        messageStack.distribution = .fill
+        messageStack.addArrangedSubview(labelMessage)
+        
+        view.addSubview(messageStack)
+        
+        NSLayoutConstraint.activate([
+            messageStack.bottomAnchor.constraint(equalTo: diceStack.topAnchor),
+            messageStack.topAnchor.constraint(equalTo: scoresView.bottomAnchor),
+            messageStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            labelMessage.widthAnchor.constraint(equalToConstant: 70 * scaleFactor),
+            labelMessage.heightAnchor.constraint(equalToConstant: 40 * scaleFactor)
+        ])
+    }
+    
+    func popUpMessage(text: String) {
+        let secondsToDelayOpen = 0.1
+        let secondsToDelayClose = 1.5
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + secondsToDelayOpen) {
+            //UIView.animate(withDuration: secondsToDelayClose, delay: 0.02) {
+                self.labelMessage.alpha = 1
+                self.labelMessage.text = text
+            //}
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + secondsToDelayClose) {
+            UIView.animate(withDuration: secondsToDelayClose, delay: 0.2) {
+                self.labelMessage.alpha = 0
+            }
+        }
+    }
     
     @objc func rollButtonTapped() {
-       let result = model.roll()
-        print(result)
+        let roll1 = model.roll()
+        let roll2 = model.roll()
+        var sum = 0
+        var string = ""
+        dice1.image = UIImage(named: model.setBlackDice(scores: roll1))
+        dice2.image = UIImage(named: model.setBlueDice(scores: roll2))
+        
+        if isTwoDices {
+            sum = roll1 + roll2 + 2
+            string =  "+ \(sum)"
+        } else {
+            sum = roll1 + 1
+            string = "+ \(sum)"
+        }
+        
+        let currentIndex = playerSegmentedControl.selectedSegmentIndex
+        var currentPlayer = model.data.players[currentIndex]
+        
+        currentPlayer.currentScore = sum
+        currentPlayer.totalScore += sum
+        currentPlayer.attempts += 1
+        currentPlayer.isActive = true
+        
+        model.data.players[currentIndex] = currentPlayer
+        
+        for i in model.data.players.indices where i != currentIndex {
+            model.data.players[i].isActive = false
+        }
+        
+        scoresView.updateData(players: model.data.players)
+        
+        popUpMessage(text: string)
+        
+        print("""
+            ***
+            Name: \(currentPlayer.name)
+            Current Score: \(currentPlayer.currentScore)
+            Total Scoree: \(currentPlayer.totalScore)
+            Attampts: \(currentPlayer.attempts)
+            isActive: \(currentPlayer.isActive)
+            """)
+        
+        
+    }
+    
+    private func startRollingAnimation() {
+        holdStartTime = Date()
+        
+        rollAnimationTimer?.invalidate()
+        rollAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            self?.dice1.image = UIImage(named: self?.model.setBlackDice(scores: self?.model.roll() ?? 0) ?? "")
+            self?.dice2.image = UIImage(named: self?.model.setBlueDice(scores: self?.model.roll() ?? 0) ?? "")
+        }
+        
+        // контроль максимальных 5 секунд
+        holdDurationTimer?.invalidate()
+        holdDurationTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] timer in
+            guard let self = self else { return }
+            
+            let elapsed = Date().timeIntervalSince(self.holdStartTime ?? Date())
+            
+            if elapsed >= self.maxHoldTime {
+                self.finishRollingAnimation()
+            }
+        }
+    }
+    
+    private func finishRollingAnimation() {
+        rollAnimationTimer?.invalidate()
+        holdDurationTimer?.invalidate()
+
+        // итоговый бросок
+        let r1 = model.roll()
+        let r2 = model.roll()
+
+        dice1.image = UIImage(named: model.setBlackDice(scores: r1))
+        dice2.image = UIImage(named: model.setBlueDice(scores: r2))
+
+        let sum = (isTwoDices ? r1 + r2 + 2 : r1 + 1)
+        popUpMessage(text: "+\(sum)")
+
+        // обновление данных игрока и UI
+        updateCurrentPlayer(sum: sum)
+    }
+    
+    private func updateCurrentPlayer(sum: Int) {
+        let currentIndex = playerSegmentedControl.selectedSegmentIndex
+        var currentPlayer = model.data.players[currentIndex]
+
+        currentPlayer.currentScore = sum
+        currentPlayer.totalScore += sum
+        currentPlayer.attempts += 1
+        currentPlayer.isActive = true
+
+        model.data.players[currentIndex] = currentPlayer
+
+        for i in model.data.players.indices where i != currentIndex {
+            model.data.players[i].isActive = false
+        }
+
+        scoresView.updateData(players: model.data.players)
+    }
+    
+    
+    @objc func openSettings() {
+        
+    }
+    
+    @objc func playerChanged() {
+        let index = playerSegmentedControl.selectedSegmentIndex
+        
+        // сбрасываем активность у всех
+        for i in model.data.players.indices {
+            model.data.players[i].isActive = (i == index)
+        }
+        
+        scoresView.updateData(players: model.data.players)
+    }
+    
+    @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            startRollingAnimation()
+            
+        case .ended, .cancelled, .failed:
+            finishRollingAnimation()
+            
+        default:
+            break
+        }
     }
 }
 

@@ -45,3 +45,29 @@ var scaleFactor: CGFloat {
     case .iPad:   return 1.18
     }
 }
+
+
+enum Players: String {
+    case player1 = "P1"
+    case player2 = "P2"
+    case player3 = "P3"
+    case player4 = "P4"
+    
+    var name: String { self.rawValue }
+}
+
+
+enum LayoutType: String {
+        case row
+        case grid
+        
+        /// SF Symbol name representing each layout visually.
+        var iconName: String {
+            switch self {
+            case .row:
+                return "circle.grid.2x1.fill"
+            case .grid:
+                return "circle.grid.3x3.fill"
+            }
+        }
+    }

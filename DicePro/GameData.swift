@@ -16,6 +16,7 @@ struct Player {
     var name: String
     var totalScore: Int
     var currentScore: Int
-    var turn: Int
+    var attempts: Int
     var rank: Int
+    var isActive: Bool
 }
