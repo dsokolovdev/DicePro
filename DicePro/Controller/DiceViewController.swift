@@ -9,6 +9,7 @@ import UIKit
 
 class DiceViewController: UIViewController {
     private var model: DiceModel
+    var settings = Settings.defaults
     private var scoresView: ScoresView!
     
     private var currentLayout: LayoutType = .row {
@@ -428,7 +429,8 @@ extension DiceViewController {
     
     
     @objc func openSettings() {
-        
+        let settingsVC = SettingsTableViewController()
+        navigationController?.pushViewController(settingsVC, animated: true)
     }
     
     @objc func playerChanged() {

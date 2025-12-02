@@ -165,8 +165,8 @@ final class ScoresView: UIView {
     }
     
     func updateLablesColors(activePlayer: Int? = nil) {
-        let attemptColor: UIColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00).withAlphaComponent(0.4) //red
-        let rankColor: UIColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00).withAlphaComponent(0.4) //gold
+        let attemptColor: UIColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00).withAlphaComponent(0.5) //red
+        let rankColor: UIColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00).withAlphaComponent(0.5) //gold
         let scoreColor: UIColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
         
         let attemptFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 40, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
