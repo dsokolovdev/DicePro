@@ -27,6 +27,10 @@ struct DiceModel  {
         didSet { data.updateRanks() }
     }
     
+    var hasScores: Bool {
+        return data.players.contains { $0.totalScore > 0 || $0.attempts > 0 }
+    }
+    
     func roll() -> Int {
         Int.random(in: 0...5)
     }
@@ -35,6 +39,17 @@ struct DiceModel  {
         let dice = color.diceArray
         
         return dice[score]
+    }
+    
+    mutating func resetAllScores() {
+        for i in data.players.indices {
+            data.players[i].totalScore = 0
+            data.players[i].currentScore = 0
+            data.players[i].attempts = 0
+            data.players[i].rank = 0
+        }
+        
+        data.updateRanks()
     }
 }
 

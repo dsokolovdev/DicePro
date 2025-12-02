@@ -96,7 +96,7 @@ final class ScoresView: UIView {
         verticalStack = UIStackView()
         verticalStack.axis = .vertical
         verticalStack.spacing = 6
-        verticalStack.distribution = .fill
+        verticalStack.distribution = .fillEqually
         verticalStack.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(verticalStack)
@@ -165,13 +165,21 @@ final class ScoresView: UIView {
     }
     
     func updateLablesColors(activePlayer: Int? = nil) {
+        
         let attemptColor: UIColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00).withAlphaComponent(0.5) //red
         let rankColor: UIColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00).withAlphaComponent(0.5) //gold
         let scoreColor: UIColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
         
-        let attemptFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 40, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
-        let rankFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 40, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
-        let scoreFont: UIFont = currentLayout == .row ? .systemFont(ofSize: 50, weight: .medium) : .systemFont(ofSize: 40, weight: .medium)
+        
+        let firstMaxFont: CGFloat = 50 * scaleFactor
+        let secondMaxfont: CGFloat = 45 * scaleFactor
+        let minfont: CGFloat = 26 * scaleFactor
+        let firstSize: CGFloat = firstMaxFont - (firstMaxFont - minfont) / 4 * Double(labels.count)
+        let secondSize: CGFloat = secondMaxfont - (secondMaxfont - minfont) / 4 * Double(labels.count)
+        
+        let attemptFont: UIFont = currentLayout == .row ? .systemFont(ofSize: secondMaxfont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
+        let rankFont: UIFont = currentLayout == .row ? .systemFont(ofSize: secondMaxfont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
+        let scoreFont: UIFont = currentLayout == .row ? .systemFont(ofSize: firstMaxFont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
         
         if currentLayout == .row {
             for (_,label) in labels.enumerated() {
