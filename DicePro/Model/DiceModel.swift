@@ -20,19 +20,21 @@ struct DiceModel  {
         }
     }
     
-    var data: GameData = GameData(players: [
-        Player(name: Players.player1.name, totalScore: 0, currentScore: 0, attempts: 0, rank: 0, isActive: false),
-        Player(name: Players.player2.name, totalScore: 0, currentScore: 0, attempts: 0, rank: 0, isActive: false)
-    ]) {
-        didSet { data.updateRanks() }
-    }
-    
     var hasScores: Bool {
         return data.players.contains { $0.totalScore > 0 || $0.attempts > 0 }
     }
     
+    var data: GameData = GameData(players: [
+        Player(name: Players.player1.name),
+        Player(name: Players.player2.name)
+    ])
+    
     func roll() -> Int {
         Int.random(in: 0...5)
+    }
+    
+    mutating func updateRanks() {
+        data.updateRanks()
     }
     
     func setDice(score: Int, color: Dices) -> String {
@@ -42,14 +44,16 @@ struct DiceModel  {
     }
     
     mutating func resetAllScores() {
-        for i in data.players.indices {
-            data.players[i].totalScore = 0
-            data.players[i].currentScore = 0
-            data.players[i].attempts = 0
-            data.players[i].rank = 0
+        if hasScores {
+            for i in data.players.indices {
+                data.players[i].totalScore = 0
+                data.players[i].currentScore = 0
+                data.players[i].attempts = 0
+                data.players[i].rank = 0
+            }
         }
         
-        data.updateRanks()
+        //data.updateRanks()
     }
 }
 

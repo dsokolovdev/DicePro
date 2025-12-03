@@ -28,7 +28,6 @@ class DiceViewController: UIViewController {
     private let dice2 = UIImageView()
     private let dice1Color = DiceModel.Dices.WhiteBlue
     private let dice2Color = DiceModel.Dices.BlueGrey
-    //private var isTwoDices: Bool = settings.isTwoDicesEnabled
     private var rollButton: UIButton!
     private var rollBar: UIToolbar!
     private var diceStack: UIStackView!
@@ -73,12 +72,11 @@ class DiceViewController: UIViewController {
         let constant: CGFloat = 16 * scaleFactor
         view.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 0, leading: constant, bottom: 0, trailing: constant)
     }
-
-
 }
 
+//MARK: Setup UI
 extension DiceViewController {
-    //MARK: Setup UI
+    //MARK: - Navigation Bar SetUp
     func setupNavigationBar() {
         
         if settingsButton == nil {
@@ -121,6 +119,7 @@ extension DiceViewController {
         
     }
     
+    //MARK: - Top Menu Bar SetUp
     func makeViewMenu() -> UIMenu {
         let activeColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
         let inactiveColor = UIColor.systemGray
@@ -157,11 +156,12 @@ extension DiceViewController {
     }
     
     func applyLayout(_ layout: LayoutType) {
-        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
-            self.currentLayout = layout
-        }
+        //UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            currentLayout = layout
+        //}
     }
     
+    //MARK: - Roll Button SetUp
     func setupRollButton() {
         rollButton = UIButton(type: .system)
         
@@ -208,6 +208,7 @@ extension DiceViewController {
         
     }
     
+    //MARK: - Segmented Control SetUp
     func setupSegmentedContol() {
         playerSegmentedControlBarView = UIView()
         playerSegmentedControlBarView.translatesAutoresizingMaskIntoConstraints = false
@@ -259,6 +260,7 @@ extension DiceViewController {
         ])
     }
     
+    //MARK: - Scores View SetUp
     func setupScoresView() {
         scoresView = ScoresView()
         scoresView.translatesAutoresizingMaskIntoConstraints = false
@@ -271,10 +273,9 @@ extension DiceViewController {
             scoresView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
             scoresView.heightAnchor.constraint(equalToConstant: 150 * scaleFactor)
         ])
-        
-        
     }
     
+    //MARK: - Dices SetUp
     func setupDiceStack() {
         let diceArray = settings.isTwoDicesEnabled ? [dice1, dice2] : [dice1]
         diceStack = UIStackView(arrangedSubviews: diceArray)
@@ -284,20 +285,22 @@ extension DiceViewController {
         diceStack.distribution = .fillEqually
         
         view.addSubview(diceStack)
-        
+
         dice1.image = UIImage(named: model.setDice(score: model.roll(), color: dice1Color))
         dice2.image = UIImage(named: model.setDice(score: model.roll(), color: dice2Color))
-
+        
         dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
-
+        
         NSLayoutConstraint.activate([
             diceStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             diceStack.bottomAnchor.constraint(equalTo: rollButton.topAnchor, constant: -90 * scaleFactor)
         ])
     }
     
+    
+    //MARK: - Pop Up Label SetUp
     func setupLabelMessage () {
-        labelMessage = UILabel()
+        labelMessage = AnimatedLabel()
         labelMessage.text  = ""
         labelMessage.textColor = .secondaryLabel
         labelMessage.backgroundColor = UIColor.systemGray6
@@ -328,17 +331,22 @@ extension DiceViewController {
             labelMessage.heightAnchor.constraint(equalToConstant: 40 * scaleFactor)
         ])
     }
-    
+}
+
+//MARK: - Actions
+extension DiceViewController {
+    //MARK: - PopUp Message Appearance
+    //Pop Up Button
     func popUpMessage(text: String) {
         let secondsToDelayOpen = 0.1
         let secondsToDelayClose = 1.5
         
         DispatchQueue.main.asyncAfter(deadline: .now() + secondsToDelayOpen) {
             //UIView.animate(withDuration: secondsToDelayClose, delay: 0.02) {
-                self.labelMessage.alpha = 1
-            UIView.transition(with: self.labelMessage, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            self.labelMessage.alpha = 1
+            //UIView.transition(with: self.labelMessage, duration: 0.15, options: .transitionCrossDissolve) { [self] in
                 self.labelMessage.text = text
-            }
+            //}
             //}
         }
         
@@ -349,6 +357,8 @@ extension DiceViewController {
         }
     }
     
+    //MARK: - Roll Button Tap Action
+    //Roll button Tapped
     @objc func rollButtonTapped() {
         lightHaptic.impactOccurred()
         
@@ -356,10 +366,9 @@ extension DiceViewController {
         let roll2 = model.roll()
         var sum = 0
         var string = ""
-        UIView.transition(with: diceStack, duration: 0.15, options: .transitionCrossDissolve) { [self] in
-            dice1.image = UIImage(named: model.setDice(score: roll1, color: dice1Color))
-            dice2.image = UIImage(named: model.setDice(score: roll2, color: dice2Color))
-        }
+        
+        dice1.setImageAnimated(UIImage(named: model.setDice(score: roll1, color: dice1Color)))
+        dice2.setImageAnimated(UIImage(named: model.setDice(score: roll2, color: dice2Color)))
         
         if settings.isTwoDicesEnabled {
             sum = roll1 + roll2 + 2
@@ -369,29 +378,71 @@ extension DiceViewController {
             string = "+ \(sum)"
         }
         
-        let currentIndex = playerSegmentedControl.selectedSegmentIndex
-        var currentPlayer = model.data.players[currentIndex]
-        
-        currentPlayer.currentScore = sum
-        currentPlayer.totalScore += sum
-        currentPlayer.attempts += 1
-        currentPlayer.isActive = true
-        
-        model.data.players[currentIndex] = currentPlayer
-        
-        for i in model.data.players.indices where i != currentIndex {
-            model.data.players[i].isActive = false
-        }
-        
-        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
-            scoresView.updateData(players: model.data.players)
-        }
-        
+        updateCurrentPlayer(sum: sum)
         popUpMessage(text: string)
+
+    }
+    
+    //MARK: - Segmented Control Change Segment Action
+    @objc func playerChanged() {
+        let index = playerSegmentedControl.selectedSegmentIndex
+        
+        // сбрасываем активность у всех
+        for i in model.data.players.indices {
+            model.data.players[i].isActive = (i == index)
+        }
+        
+        //UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            scoresView.updateData(players: model.data.players)
+            scoresView.updateLablesColors(activePlayer: index)
+        //}
+        
+    }
+    
+    //MARK: - Settings Button Tap Action
+    @objc func openSettings() {
+        let settingsVC = SettingsViewController(settings: settings)
+        settingsVC.onSettingsChanged = { [weak self] newSettings in
+            guard let self = self else { return  }
+            self.settings = newSettings
+            self.applySettings(newSettings)
+        }
+        
+        navigationController?.pushViewController(settingsVC, animated: true)
+    }
+    
+    //MARK: - Reset Button Tap Action
+    @objc func resetScores() {
+        lightHaptic.impactOccurred()
+        model.resetAllScores()
+        scoresView.updateData(players: model.data.players)
         
         updateResetButtonState()
     }
+}
+
+extension DiceViewController {
+    //MARK: - Long Press Roll Button Action
+    //Long Press
+    @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            startRollingAnimation()
+            
+        case .ended, .cancelled, .failed:
+            guard !hasFinalizedRoll else { return }
+            finishRollingAnimation()
+            
+        default:
+            break
+        }
+        
+        //model.updateRanks()
+        
+        //updateResetButtonState()
+    }
     
+    //Start Animation
     private func startRollingAnimation() {
         lightHaptic.impactOccurred()
         holdStartTime = Date()
@@ -416,134 +467,117 @@ extension DiceViewController {
             }
         }
     }
-    
+    //End Animation
     private func finishRollingAnimation() {
         lightHaptic.impactOccurred()
         rollAnimationTimer?.invalidate()
         holdDurationTimer?.invalidate()
-
+        
         // итоговый бросок
         let r1 = model.roll()
         let r2 = model.roll()
-
+        
         dice1.image = UIImage(named: model.setDice(score: r1, color: dice1Color))
         dice2.image = UIImage(named: model.setDice(score: r2, color: dice2Color))
-
+        
         let sum = (settings.isTwoDicesEnabled ? r1 + r2 + 2 : r1 + 1)
         popUpMessage(text: "+\(sum)")
-
+        
         // обновление данных игрока и UI
         updateCurrentPlayer(sum: sum)
     }
-    
+}
+
+extension DiceViewController {
+    //MARK: - Update Players Data
+    //Current Player
     private func updateCurrentPlayer(sum: Int) {
         let currentIndex = playerSegmentedControl.selectedSegmentIndex
         var currentPlayer = model.data.players[currentIndex]
-
+        
         currentPlayer.currentScore = sum
         currentPlayer.totalScore += sum
         currentPlayer.attempts += 1
         currentPlayer.isActive = true
-
+        
         model.data.players[currentIndex] = currentPlayer
-
+        
         for i in model.data.players.indices where i != currentIndex {
             model.data.players[i].isActive = false
         }
-
-        scoresView.updateData(players: model.data.players)
-    }
-    
-    
-    @objc func openSettings() {
-        let settingsVC = SettingsViewController(settings: settings)
-        settingsVC.onSettingsChanged = { [weak self] newSettings in
-            guard let self = self else { return  }
-            self.settings = newSettings
-            self.applySettings(newSettings)
-        }
         
-        navigationController?.pushViewController(settingsVC, animated: true)
-    }
-    
-    @objc func resetScores() {
-        lightHaptic.impactOccurred()
-        model.resetAllScores()
+        model.updateRanks()
         scoresView.updateData(players: model.data.players)
-        
         updateResetButtonState()
     }
     
+    //Settins
     func applySettings(_ newSettings: Settings) {
         settings = newSettings
-
+        
         // 1. Обновляем список игроков по настройкам
         updatePlayers(settings)  // ← ЭТО САМОЕ ВАЖНОЕ
-
+        
         // 2. Обновляем segmented control на основе нового списка игроков
         updateSegmentedControl()
-
+        
         // 3. Обновляем количество кубиков
         updateDiceVisibility()
-
+        
         // 4. Экран всегда включён
         UIApplication.shared.isIdleTimerDisabled = settings.isScreenAlwaysOnEnabled
-
+        
         // 5. Обновляем ScoreView
         scoresView.update(players: model.data.players, layout: currentLayout)
         scoresView.updateLablesColors(activePlayer: playerSegmentedControl.selectedSegmentIndex)
     }
     
+    //Players
     private func updatePlayers(_ settings: Settings) {
-
         var updatedPlayers: [Player] = []
-
+        
         // P1 ALWAYS EXISTS
         updatedPlayers.append(model.data.players[0])
-
+        
         // P2 ALWAYS EXISTS
         updatedPlayers.append(model.data.players[1])
-
+        
         // Player 3
         if settings.isPlayer3Enabled {
             if model.data.players.count < 3 {
-                updatedPlayers.append(
-                    Player(name: "P3", totalScore: 0,
-                           currentScore: 0, attempts: 0,
-                           rank: 0, isActive: false)
-                )
+                updatedPlayers.append(Player(name: "P3"))
             } else {
                 updatedPlayers.append(model.data.players[2])
             }
         }
-
+        
         // Player 4
         if settings.isPlayer4Enabled {
             if model.data.players.count < 4 {
-                updatedPlayers.append(
-                    Player(name: "P4", totalScore: 0,
-                           currentScore: 0, attempts: 0,
-                           rank: 0, isActive: false)
-                )
+                updatedPlayers.append(Player(name: "P4"))
             } else {
                 updatedPlayers.append(model.data.players[3])
             }
         }
-
+        
         model.data.players = updatedPlayers
+        
         model.data.updateRanks()
-
+        
         updateSegmentedControl()
     }
-    
+}
+
+extension DiceViewController {
+    //MARK: - Update UI Elements States
     func updateSegmentedControl() {
         playerSegmentedControl.removeAllSegments()
-
-            for (i, player) in model.data.players.enumerated() {
-                playerSegmentedControl.insertSegment(withTitle: player.name, at: i, animated: false)
-            }
-
-            playerSegmentedControl.selectedSegmentIndex = 0
+        
+        for (i, player) in model.data.players.enumerated() {
+            playerSegmentedControl.insertSegment(withTitle: player.name, at: i, animated: false)
+        }
+        
+        playerSegmentedControl.selectedSegmentIndex = 0
     }
     
     func updateDiceVisibility() {
@@ -558,50 +592,18 @@ extension DiceViewController {
                 dice1.transform = .identity
                 dice2.transform = .identity
             }
-
+            
         } else {
             if diceStack.arrangedSubviews.contains(dice2) {
                 diceStack.removeArrangedSubview(dice2)
                 dice2.removeFromSuperview()
             }
-
+            
             // увеличить кубик
             UIView.animate(withDuration: 0.15) {
                 self.dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
             }
         }
-    }
-    
-    @objc func playerChanged() {
-        
-        let index = playerSegmentedControl.selectedSegmentIndex
-        
-        // сбрасываем активность у всех
-        for i in model.data.players.indices {
-            model.data.players[i].isActive = (i == index)
-        }
-        
-        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
-            scoresView.updateData(players: model.data.players)
-            scoresView.updateLablesColors(activePlayer: index)
-        }
-        
-    }
-    
-    @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
-        switch gesture.state {
-        case .began:
-            startRollingAnimation()
-            
-        case .ended, .cancelled, .failed:
-            guard !hasFinalizedRoll else { return }
-            finishRollingAnimation()
-            
-        default:
-            break
-        }
-        
-        updateResetButtonState()
     }
     
     func updateResetButtonState() {

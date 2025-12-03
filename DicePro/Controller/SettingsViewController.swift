@@ -154,9 +154,9 @@ extension SettingsViewController {
         }
     
     func updateResetButtonState() {
-        UIView.transition(with: resetButton, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+        //UIView.transition(with: resetButton, duration: 0.15, options: .transitionCrossDissolve) { [self] in
             resetButton.isEnabled = !settings.isDefault
-        }
+        //}
     }
 }
 

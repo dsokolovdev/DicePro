@@ -65,9 +65,10 @@ final class ScoresView: UIView {
 
 // MARK: - Private UI Builders
  extension ScoresView {
-
+     
+     //MARK: - Create Labels
     func createLabel(alignment: NSTextAlignment) -> UILabel {
-        let lbl = UILabel()
+        let lbl = AnimatedLabel()
         lbl.text = "0"
         lbl.textAlignment = alignment
         lbl.font = .systemFont(ofSize: 20 * scaleFactor, weight: .medium)
@@ -76,7 +77,8 @@ final class ScoresView: UIView {
         lbl.minimumScaleFactor = 0.7
         return lbl
     }
-
+     
+     //MARK: - Create Horizontal Stack
     func makeHStack(_ labels: [UILabel]) -> UIStackView {
         let stack = UIStackView(arrangedSubviews: labels)
         stack.axis = .horizontal
@@ -85,20 +87,32 @@ final class ScoresView: UIView {
         stack.distribution = .fill
         return stack
     }
-
+     
+     func makeVStack(distribution: UIStackView.Distribution) -> UIStackView {
+         let stack = UIStackView()
+         stack.axis = .vertical
+         stack.spacing = 6
+         stack.distribution = distribution
+         stack.translatesAutoresizingMaskIntoConstraints = false
+         return stack
+     }
+     
+     
+     //MARK: - Update Layout
     func rebuildLayout(players: [Player]) {
-
         // 1. Clear previous content
         verticalStack.removeFromSuperview()
         labels.removeAll()
 
         // 2. Create fresh vertical stack
-        verticalStack = UIStackView()
-        verticalStack.axis = .vertical
-        verticalStack.spacing = 6
-        verticalStack.distribution = .fillEqually
-        verticalStack.translatesAutoresizingMaskIntoConstraints = false
-
+//        verticalStack = UIStackView()
+//        verticalStack.axis = .vertical
+//        verticalStack.spacing = 6
+//        verticalStack.distribution = .fillEqually
+//        verticalStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        let distribution: UIStackView.Distribution = currentLayout == .row ? .fill : .fillEqually
+        verticalStack = makeVStack(distribution: distribution)
         addSubview(verticalStack)
 
         NSLayoutConstraint.activate([
@@ -116,14 +130,6 @@ final class ScoresView: UIView {
             let attempts = createLabel(alignment: .left)
             let rank = createLabel(alignment: .right)
             let score = createLabel(alignment: .right)
-            
-//            attempts.textColor = .secondaryLabel//UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00) //red
-//            rank.textColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00) //gold
-//            score.textColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
-//            
-//            attempts.font = .systemFont(ofSize: 40, weight: .medium)
-//            rank.font = .systemFont(ofSize: 40, weight: .medium)
-//            score.font = .systemFont(ofSize: 50, weight: .medium)
 
             labels[0].append(contentsOf: [attempts, rank, score])
 
@@ -143,14 +149,6 @@ final class ScoresView: UIView {
                 let score = createLabel(alignment: .right)
                 let rank = createLabel(alignment: .right)
                 
-//                attempts.textColor = .secondaryLabel//UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00) //red
-//                rank.textColor = .tertiaryLabel//UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00) //gold
-//                score.textColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
-//                
-//                attempts.font = .systemFont(ofSize: 40, weight: .medium)
-//                rank.font = .systemFont(ofSize: 40, weight: .medium)
-//                score.font = .systemFont(ofSize: 40, weight: .medium)
-                
                 rank.widthAnchor.constraint(equalToConstant: 60).isActive = true
 
                 labels[i].append(contentsOf: [attempts, score, rank])
@@ -164,17 +162,17 @@ final class ScoresView: UIView {
         updateLablesColors()
     }
     
+     //MARK: - Update Colors
     func updateLablesColors(activePlayer: Int? = nil) {
         
         let attemptColor: UIColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00).withAlphaComponent(0.5) //red
         let rankColor: UIColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00).withAlphaComponent(0.5) //gold
         let scoreColor: UIColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
         
-        
-        let firstMaxFont: CGFloat = 50 * scaleFactor
+        let firstMaxFont: CGFloat = 60 * scaleFactor
         let secondMaxfont: CGFloat = 45 * scaleFactor
         let minfont: CGFloat = 26 * scaleFactor
-        let firstSize: CGFloat = firstMaxFont - (firstMaxFont - minfont) / 4 * Double(labels.count)
+        //let firstSize: CGFloat = firstMaxFont - (firstMaxFont - minfont) / 4 * Double(labels.count)
         let secondSize: CGFloat = secondMaxfont - (secondMaxfont - minfont) / 4 * Double(labels.count)
         
         let attemptFont: UIFont = currentLayout == .row ? .systemFont(ofSize: secondMaxfont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
@@ -210,4 +208,3 @@ final class ScoresView: UIView {
         }
     }
 }
-

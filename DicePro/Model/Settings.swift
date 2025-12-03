@@ -36,4 +36,5 @@ struct Settings {
             © 2025
             """
     }
+    
 }
