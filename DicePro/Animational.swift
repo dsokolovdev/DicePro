@@ -2,11 +2,13 @@
 //  Animational.swift
 //  DicePro
 //
-//  Created by Dmitri  on 03.12.25.
+//  Created by Dmitri on 03.12.25.
 //
 
 import UIKit
 
+// MARK: - AnimatedLabel
+/// UILabel subclass that animates text changes with a fade transition.
 final class AnimatedLabel: UILabel {
 
     override var text: String? {
@@ -14,7 +16,7 @@ final class AnimatedLabel: UILabel {
             guard oldValue != text else { return }
 
             let newText = text
-            super.text = oldValue     // temporarily revert
+            super.text = oldValue // temporarily revert to animate to new text
 
             UIView.transition(
                 with: self,
@@ -28,7 +30,9 @@ final class AnimatedLabel: UILabel {
     }
 }
 
+// MARK: - UIImageView Animation
 extension UIImageView {
+    /// Smoothly transitions the image with cross-dissolve animation.
     func setImageAnimated(_ newImage: UIImage?, duration: TimeInterval = 0.15) {
         UIView.transition(
             with: self,
@@ -36,14 +40,14 @@ extension UIImageView {
             options: [.transitionCrossDissolve, .allowUserInteraction],
             animations: {
                 self.image = newImage
-            },
-            completion: nil
+            }
         )
     }
 }
 
-
+// MARK: - UIView Bounce Animation
 extension UIView {
+    /// Applies a soft bounce animation to the view using a spring effect.
     func bounce(scale: CGFloat = 1.15, duration: TimeInterval = 0.25) {
         self.transform = CGAffineTransform(scaleX: scale, y: scale)
 
@@ -55,13 +59,14 @@ extension UIView {
             options: [.allowUserInteraction],
             animations: {
                 self.transform = .identity
-            },
-            completion: nil
+            }
         )
     }
 }
 
+// MARK: - UIProgressView Alpha Animation
 extension UIProgressView {
+    /// Animates the progress view's alpha value.
     func setAlphaAnimated(_ value: CGFloat, duration: TimeInterval = 0.25) {
         UIView.animate(
             withDuration: duration,
@@ -69,8 +74,7 @@ extension UIProgressView {
             options: [.curveEaseInOut, .allowUserInteraction],
             animations: {
                 self.alpha = value
-            },
-            completion: nil
+            }
         )
     }
 }

@@ -9,6 +9,7 @@ import UIKit
 struct DiceModel  {
     enum Dices {
         case blackYellow, blackRed, BlueGrey, WhiteBlue
+        static var allCases: [Dices] { [.BlueGrey, .WhiteBlue] }
         
         var diceArray: [String] {
             switch self {

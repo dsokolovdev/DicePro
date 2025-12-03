@@ -9,15 +9,16 @@ import UIKit
 
 class DiceViewController: UIViewController {
     private var model: DiceModel
-    //var settings = Settings.defaults
     var settings = SettingsStorage.load()
     private var scoresView: ScoresView!
     private var lightHaptic: UIImpactFeedbackGenerator!
     private var currentLayout: LayoutType = .row {
         didSet {
             guard scoresView != nil else { return }
-            scoresView.update(players: model.data.players, layout: currentLayout)
-            scoresView.updateLablesColors(activePlayer: playerSegmentedControl.selectedSegmentIndex)
+            UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+                scoresView.update(players: model.data.players, layout: currentLayout)
+                scoresView.updateLablesColors(activePlayer: playerSegmentedControl.selectedSegmentIndex)
+            }
         }
     }
     private var viewButton: UIBarButtonItem!
@@ -35,6 +36,8 @@ class DiceViewController: UIViewController {
     private var messageStack: UIStackView!
     private var labelMessage: UILabel!
     private var progressView: UIProgressView!
+    private var dice1Index = 0
+    private var dice2Index = 1
     
     private var rollAnimationTimer: Timer?
     private var holdStartTime: Date?
@@ -290,6 +293,7 @@ extension DiceViewController {
         diceStack.distribution = .fillEqually
         
         view.addSubview(diceStack)
+        addSwipeGesturesToDice()
 
         dice1.image = UIImage(named: model.setDice(score: model.roll(), color: dice1Color))
         dice2.image = UIImage(named: model.setDice(score: model.roll(), color: dice2Color))
@@ -416,10 +420,10 @@ extension DiceViewController {
             model.data.players[i].isActive = (i == index)
         }
         
-        //UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
             scoresView.updateData(players: model.data.players)
             scoresView.updateLablesColors(activePlayer: index)
-        //}
+        }
         
     }
     
@@ -621,6 +625,29 @@ extension DiceViewController {
         model.data.updateRanks()
         
         updateSegmentedControl()
+    }
+}
+
+//MARK: - Swipes
+extension DiceViewController {
+    func addSwipeGesturesToDice() {
+        let left = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
+        left.direction = .left
+
+        let right = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
+        right.direction = .right
+        
+        dice1.isUserInteractionEnabled = true
+        dice1.addGestureRecognizer(left)
+        dice1.addGestureRecognizer(right)
+    }
+    
+    @objc func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
+        if gesture.direction == .left {
+            
+        } else {
+            
+        }
     }
 }
 
