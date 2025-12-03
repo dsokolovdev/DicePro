@@ -2,63 +2,134 @@
 //  ViewController.swift
 //  DicePro
 //
-//  Created by Dmitri  on 30.11.25.
+//  Created by Dmitri on 30.11.25.
 //
 
 import UIKit
 
+/// Main game screen that displays dice, players, scores and controls.
 class DiceViewController: UIViewController {
+    
+    // MARK: - Game & Settings
+    
+    /// Game model containing players and dice logic.
     private var model: DiceModel
+    
+    /// Current user settings loaded from persistent storage.
     var settings = SettingsStorage.load()
+    
+    // MARK: - UI Elements
+    
+    /// View that displays attempts, rank and score.
     private var scoresView: ScoresView!
+    
+    /// Haptic feedback generator for taps and long presses.
     private var lightHaptic: UIImpactFeedbackGenerator!
+    
+    /// Current layout mode for the scores view (row or grid).
     private var currentLayout: LayoutType = .row {
         didSet {
             guard scoresView != nil else { return }
-            UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+            UIView.transition(
+                with: scoresView,
+                duration: 0.15,
+                options: .transitionCrossDissolve
+            ) { [self] in
                 scoresView.update(players: model.data.players, layout: currentLayout)
                 scoresView.updateLablesColors(activePlayer: playerSegmentedControl.selectedSegmentIndex)
             }
         }
     }
+    
+    /// Button for switching layout.
     private var viewButton: UIBarButtonItem!
+    
+    /// Button that opens the settings screen.
     private var settingsButton: UIBarButtonItem!
+    
+    /// Button that resets all game scores.
     private var resetScoreButton: UIBarButtonItem!
+    
+    /// Segmented control used to select the active player.
     private var playerSegmentedControl: UISegmentedControl!
+    
+    /// Container view for the segmented control with background and shadow.
     private var playerSegmentedControlBarView: UIView!
+    
+    /// First dice image view.
     private let dice1 = UIImageView()
+    
+    /// Second dice image view.
     private let dice2 = UIImageView()
+    
+    /// Color scheme for the first dice.
     private let dice1Color = DiceModel.Dices.WhiteBlue
+    
+    /// Color scheme for the second dice.
     private let dice2Color = DiceModel.Dices.BlueGrey
+    
+    /// Main roll button.
     private var rollButton: UIButton!
+    
+    /// Reserved toolbar reference (currently unused).
     private var rollBar: UIToolbar!
+    
+    /// Stack view that holds the dice views.
     private var diceStack: UIStackView!
+    
+    /// Stack view that holds the popup label.
     private var messageStack: UIStackView!
+    
+    /// Popup label used to show a short “+N” message after roll.
     private var labelMessage: UILabel!
+    
+    /// Progress bar that indicates long-press duration.
     private var progressView: UIProgressView!
+    
+    /// Index for the first dice (reserved for future use, e.g. color swapping).
     private var dice1Index = 0
+    
+    /// Index for the second dice (reserved for future use, e.g. color swapping).
     private var dice2Index = 1
     
+    // MARK: - Timers & Long Press State
+    
+    /// Timer for dice rolling animation during long press.
     private var rollAnimationTimer: Timer?
+    
+    /// Timestamp when long press started.
     private var holdStartTime: Date?
+    
+    /// High-frequency timer used to track hold duration and update the progress bar.
     private var holdDurationTimer: Timer?
+    
+    /// Maximum long-press time in seconds before auto-roll triggers.
     private let maxHoldTime: TimeInterval = 7
+    
+    /// Indicates that final roll after long press has already been performed.
     private var hasFinalizedRoll = false
     
+    // MARK: - Init
+    
+    /// Designated initializer used when creating controller in code.
     init() {
         self.model = DiceModel()
         self.model.data = GameStorage.load()
         super.init(nibName: nil, bundle: nil)
     }
     
+    /// Required initializer for storyboard / nib usage.
     required init?(coder: NSCoder) {
-        let model = DiceModel()       // создаём дефолтную модель
+        let model = DiceModel()
         self.model = model
         super.init(coder: coder)
     }
     
+    // MARK: - Lifecycle
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         setupNavigationBar()
         setupSegmentedContol()
         setupScoresView()
@@ -69,22 +140,34 @@ class DiceViewController: UIViewController {
         applyDiceSizeBasedOnSettings()
         
         scoresView.update(players: model.data.players, layout: currentLayout)
+        
         if #available(iOS 17.5, *) {
             lightHaptic = UIImpactFeedbackGenerator(style: .light, view: view)
         } else {
-            // Fallback on earlier versions
+            // Fallback for earlier iOS versions (no view-based initializer available).
         }
+        
         title = "DicePro"
         view.backgroundColor = .systemBackground
         view.preservesSuperviewLayoutMargins = true
+        
         let constant: CGFloat = 16 * scaleFactor
-        view.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 0, leading: constant, bottom: 0, trailing: constant)
+        view.directionalLayoutMargins = NSDirectionalEdgeInsets(
+            top: 0,
+            leading: constant,
+            bottom: 0,
+            trailing: constant
+        )
     }
 }
 
-//MARK: Setup UI
+// MARK: - UI Setup
+
 extension DiceViewController {
-    //MARK: - Navigation Bar SetUp
+    
+    // MARK: - Navigation Bar Setup
+    
+    /// Configures navigation bar buttons: settings, layout and reset scores.
     func setupNavigationBar() {
         
         if settingsButton == nil {
@@ -96,17 +179,19 @@ extension DiceViewController {
             )
         }
         
-        // RESET SCORES
+        // Reset Scores button
         if resetScoreButton == nil {
-            
             resetScoreButton = UIBarButtonItem(
-                image: UIImage(systemName: "arrow.counterclockwise", withConfiguration: UIImage.SymbolConfiguration(weight: .bold)),
+                image: UIImage(
+                    systemName: "arrow.counterclockwise",
+                    withConfiguration: UIImage.SymbolConfiguration(weight: .bold)
+                ),
                 style: .plain,
                 target: self,
                 action: #selector(resetScores)
             )
         }
-        resetScoreButton.tintColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00)
+        resetScoreButton.tintColor = AppColors.coolRed
         resetScoreButton.isEnabled = false
         
         if viewButton == nil {
@@ -114,62 +199,91 @@ extension DiceViewController {
                 image: UIImage(systemName: currentLayout.iconName),
                 menu: makeViewMenu()
             )
-            viewButton.tintColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
+            viewButton.tintColor = AppColors.mazarineBlue
         } else {
             viewButton.image = UIImage(systemName: currentLayout.iconName)
             viewButton.menu = makeViewMenu()
         }
         
-        let space = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let space = UIBarButtonItem(
+            barButtonSystemItem: .flexibleSpace,
+            target: nil,
+            action: nil
+        )
         
         navigationItem.leftBarButtonItem = settingsButton
         navigationItem.rightBarButtonItems = [viewButton, space, resetScoreButton]
-        
     }
     
-    //MARK: - Top Menu Bar SetUp
+    // MARK: - Layout Menu
+    
+    /// Builds the layout mode menu (row/grid) for the navigation bar button.
     func makeViewMenu() -> UIMenu {
-        let activeColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
+        let activeColor = AppColors.mazarineBlue
         let inactiveColor = UIColor.systemGray
         
-        let rowImage = UIImage(systemName: "circle.grid.2x1.fill", withConfiguration: UIImage.SymbolConfiguration(paletteColors: [currentLayout == .row ? activeColor : inactiveColor]))
-        let gridImage = UIImage(systemName: "circle.grid.3x3.fill", withConfiguration: UIImage.SymbolConfiguration(paletteColors: [currentLayout == .grid ? activeColor : inactiveColor]))
+        let rowImage = UIImage(
+            systemName: "circle.grid.2x1.fill",
+            withConfiguration: UIImage.SymbolConfiguration(
+                paletteColors: [currentLayout == .row ? activeColor : inactiveColor]
+            )
+        )
+        let gridImage = UIImage(
+            systemName: "circle.grid.3x3.fill",
+            withConfiguration: UIImage.SymbolConfiguration(
+                paletteColors: [currentLayout == .grid ? activeColor : inactiveColor]
+            )
+        )
         
-        let rowAction = UIAction(title: "Row", image: rowImage, state: currentLayout == .row ? .on : .off) { [weak self] _ in
+        let rowAction = UIAction(
+            title: "Row",
+            image: rowImage,
+            state: currentLayout == .row ? .on : .off
+        ) { [weak self] _ in
             guard let self = self else { return }
-            //self.currentLayout = .row
             self.applyLayout(.row)
             self.viewButton.image = UIImage(systemName: LayoutType.row.iconName)
             self.viewButton.menu = self.makeViewMenu()
-            
         }
         
-        let gridAction =  UIAction(title: "Grid", image: gridImage, state: currentLayout == .grid ? .on : .off) { [weak self] _ in
+        let gridAction = UIAction(
+            title: "Grid",
+            image: gridImage,
+            state: currentLayout == .grid ? .on : .off
+        ) { [weak self] _ in
             guard let self = self else { return }
-            //self.currentLayout = .grid
             self.applyLayout(.grid)
             self.viewButton.image = UIImage(systemName: LayoutType.grid.iconName)
             self.viewButton.menu = self.makeViewMenu()
-            
         }
         
         func attributedTitle(_ text: String, isActive: Bool) -> NSAttributedString {
-            NSAttributedString(string: text, attributes: [.foregroundColor: isActive ? activeColor : inactiveColor])
+            NSAttributedString(
+                string: text,
+                attributes: [.foregroundColor: isActive ? activeColor : inactiveColor]
+            )
         }
         
-        rowAction.setValue(attributedTitle("Row", isActive: currentLayout == .row), forKey: "attributedTitle")
-        gridAction.setValue(attributedTitle("Grid", isActive: currentLayout == .grid), forKey: "attributedTitle")
+        rowAction.setValue(
+            attributedTitle("Row", isActive: currentLayout == .row),
+            forKey: "attributedTitle"
+        )
+        gridAction.setValue(
+            attributedTitle("Grid", isActive: currentLayout == .grid),
+            forKey: "attributedTitle"
+        )
         
         return UIMenu(title: "View Mode", children: [rowAction, gridAction])
     }
     
+    /// Applies selected layout mode to the scores view.
     func applyLayout(_ layout: LayoutType) {
-        //UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
-            currentLayout = layout
-        //}
+        currentLayout = layout
     }
     
-    //MARK: - Roll Button SetUp
+    // MARK: - Roll Button Setup
+    
+    /// Configures the main Roll button and the long-press gesture.
     func setupRollButton() {
         rollButton = UIButton(type: .system)
         
@@ -177,13 +291,19 @@ extension DiceViewController {
             var configuration = UIButton.Configuration.glass()
             configuration.attributedTitle = AttributedString(
                 "Roll",
-                attributes: AttributeContainer([ .font: UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold), .foregroundColor: UIColor.white])
+                attributes: AttributeContainer([
+                    .font: UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold),
+                    .foregroundColor: UIColor.white
+                ])
             )
             rollButton.configuration = configuration
-            rollButton.backgroundColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
+            rollButton.backgroundColor = AppColors.mazarineBlue
         } else {
             rollButton.setTitle("Roll", for: .normal)
-            rollButton.titleLabel?.font = UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold)
+            rollButton.titleLabel?.font = UIFont.systemFont(
+                ofSize: 24 * scaleFactor,
+                weight: .semibold
+            )
             rollButton.setTitleColor(.white, for: .normal)
             rollButton.backgroundColor = .systemBlue.withAlphaComponent(0.8)
             
@@ -195,11 +315,13 @@ extension DiceViewController {
             rollButton.layer.masksToBounds = false
         }
         
-        
         rollButton.addTarget(self, action: #selector(rollButtonTapped), for: .touchUpInside)
         
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
-        longPress.minimumPressDuration = 0.2   // небольшая задержка
+        let longPress = UILongPressGestureRecognizer(
+            target: self,
+            action: #selector(handleLongPress(_:))
+        )
+        longPress.minimumPressDuration = 0.2
         rollButton.addGestureRecognizer(longPress)
         
         view.addSubview(rollButton)
@@ -211,12 +333,11 @@ extension DiceViewController {
             rollButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             rollButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -120 * scaleFactor)
         ])
-        
-        
-        
     }
     
-    //MARK: - Segmented Control SetUp
+    // MARK: - Segmented Control Setup
+    
+    /// Configures the player selection segmented control.
     func setupSegmentedContol() {
         playerSegmentedControlBarView = UIView()
         playerSegmentedControlBarView.translatesAutoresizingMaskIntoConstraints = false
@@ -232,29 +353,41 @@ extension DiceViewController {
         playerSegmentedControlBarView.layer.masksToBounds = false
         
         var items: [String] = []
-        for (_,item) in model.data.players.enumerated() {
+        for (_, item) in model.data.players.enumerated() {
             items.append(item.name)
         }
-        let activeColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00)
+        
+        let activeColor = AppColors.mazarineBlue
         let inactiveColor = UIColor.secondaryLabel
         let fontSize: CGFloat = 14 * scaleFactor
         let activeFont = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
         let inactiveFont = UIFont.systemFont(ofSize: fontSize, weight: .medium)
         
         playerSegmentedControl = UISegmentedControl(items: items)
-        playerSegmentedControl.selectedSegmentIndex =  0
+        playerSegmentedControl.selectedSegmentIndex = 0
         playerSegmentedControl.translatesAutoresizingMaskIntoConstraints = false
         playerSegmentedControl.selectedSegmentTintColor = .systemGray6
-        playerSegmentedControl.setTitleTextAttributes([.foregroundColor: inactiveColor, .font: inactiveFont], for: .normal)
-        playerSegmentedControl.setTitleTextAttributes([.foregroundColor: activeColor, .font: activeFont], for: .selected)
+        playerSegmentedControl.setTitleTextAttributes(
+            [.foregroundColor: inactiveColor, .font: inactiveFont],
+            for: .normal
+        )
+        playerSegmentedControl.setTitleTextAttributes(
+            [.foregroundColor: activeColor, .font: activeFont],
+            for: .selected
+        )
         playerSegmentedControl.subviews.forEach { $0.backgroundColor = .systemBackground }
-        playerSegmentedControl.addTarget(self, action: #selector(playerChanged), for: .valueChanged)
+        playerSegmentedControl.addTarget(
+            self,
+            action: #selector(playerChanged),
+            for: .valueChanged
+        )
         
         playerSegmentedControlBarView.addSubview(playerSegmentedControl)
         
         let scHeight: CGFloat = 32 * scaleFactor
         let constant: CGFloat = 3 * scaleFactor
         let barHeigh: CGFloat = 38 * scaleFactor
+        
         NSLayoutConstraint.activate([
             playerSegmentedControlBarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             playerSegmentedControlBarView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
@@ -268,7 +401,9 @@ extension DiceViewController {
         ])
     }
     
-    //MARK: - Scores View SetUp
+    // MARK: - Scores View Setup
+    
+    /// Creates and positions the scores view container.
     func setupScoresView() {
         scoresView = ScoresView()
         scoresView.translatesAutoresizingMaskIntoConstraints = false
@@ -283,7 +418,9 @@ extension DiceViewController {
         ])
     }
     
-    //MARK: - Dices SetUp
+    // MARK: - Dice Stack Setup
+    
+    /// Creates the dice stack and sets initial images and gestures.
     func setupDiceStack() {
         let diceArray = settings.isTwoDicesEnabled ? [dice1, dice2] : [dice1]
         diceStack = UIStackView(arrangedSubviews: diceArray)
@@ -294,7 +431,7 @@ extension DiceViewController {
         
         view.addSubview(diceStack)
         addSwipeGesturesToDice()
-
+        
         dice1.image = UIImage(named: model.setDice(score: model.roll(), color: dice1Color))
         dice2.image = UIImage(named: model.setDice(score: model.roll(), color: dice2Color))
         
@@ -306,28 +443,32 @@ extension DiceViewController {
         ])
     }
     
-    //MARK: - Progress Bar Setup
+    // MARK: - Progress Bar Setup
+    
+    /// Configures the progress bar used for long-press indication.
     func setupProgressBar() {
         progressView = UIProgressView(progressViewStyle: .default)
         progressView.progress = 0.0
-        progressView.progressTintColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00)
+        progressView.progressTintColor = AppColors.coolRed
         progressView.trackTintColor = .systemGray6
         progressView.alpha = 0
         
         view.addSubview(progressView)
         progressView.translatesAutoresizingMaskIntoConstraints = false
+        
         NSLayoutConstraint.activate([
-            progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor) ,
+            progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             progressView.widthAnchor.constraint(equalToConstant: 200 * scaleFactor),
             progressView.topAnchor.constraint(equalTo: diceStack.bottomAnchor, constant: 40 * scaleFactor)
         ])
     }
     
+    // MARK: - Popup Label Setup
     
-    //MARK: - Pop Up Label SetUp
-    func setupLabelMessage () {
+    /// Prepares the floating message label that shows `+N` after rolls.
+    func setupLabelMessage() {
         labelMessage = AnimatedLabel()
-        labelMessage.text  = ""
+        labelMessage.text = ""
         labelMessage.textColor = .secondaryLabel
         labelMessage.backgroundColor = UIColor.systemGray6
         labelMessage.textAlignment = .center
@@ -359,21 +500,20 @@ extension DiceViewController {
     }
 }
 
-//MARK: - Actions
+// MARK: - Actions
+
 extension DiceViewController {
-    //MARK: - PopUp Message Appearance
-    //Pop Up Button
+    
+    // MARK: - Popup Message
+    
+    /// Shows a temporary popup message above the dice stack.
     func popUpMessage(text: String) {
         let secondsToDelayOpen = 0.1
         let secondsToDelayClose = 1.5
         
         DispatchQueue.main.asyncAfter(deadline: .now() + secondsToDelayOpen) {
-            //UIView.animate(withDuration: secondsToDelayClose, delay: 0.02) {
             self.labelMessage.alpha = 1
-            //UIView.transition(with: self.labelMessage, duration: 0.15, options: .transitionCrossDissolve) { [self] in
-                self.labelMessage.text = text
-            //}
-            //}
+            self.labelMessage.text = text
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + secondsToDelayClose) {
@@ -383,8 +523,9 @@ extension DiceViewController {
         }
     }
     
-    //MARK: - Roll Button Tap Action
-    //Roll button Tapped
+    // MARK: - Roll Button Tap
+    
+    /// Handles a single tap on the roll button.
     @objc func rollButtonTapped() {
         lightHaptic.impactOccurred()
         
@@ -398,7 +539,7 @@ extension DiceViewController {
         
         if settings.isTwoDicesEnabled {
             sum = roll1 + roll2 + 2
-            string =  "+ \(sum)"
+            string = "+ \(sum)"
         } else {
             sum = roll1 + 1
             string = "+ \(sum)"
@@ -408,32 +549,36 @@ extension DiceViewController {
         popUpMessage(text: string)
         
         GameStorage.save(model.data)
-
     }
     
-    //MARK: - Segmented Control Change Segment Action
+    // MARK: - Player Selection Changed
+    
+    /// Called when user selects a different player in the segmented control.
     @objc func playerChanged() {
         let index = playerSegmentedControl.selectedSegmentIndex
         
-        // сбрасываем активность у всех
+        // Reset active flag for all players and set only the selected one.
         for i in model.data.players.indices {
             model.data.players[i].isActive = (i == index)
         }
         
-        UIView.transition(with: scoresView, duration: 0.15, options: .transitionCrossDissolve) { [self] in
+        UIView.transition(
+            with: scoresView,
+            duration: 0.15,
+            options: .transitionCrossDissolve
+        ) { [self] in
             scoresView.updateData(players: model.data.players)
             scoresView.updateLablesColors(activePlayer: index)
         }
-        
     }
     
-    //MARK: - Settings Button Tap Action
+    // MARK: - Open Settings
+    
+    /// Presents the settings screen and applies changes via callback.
     @objc func openSettings() {
         let settingsVC = SettingsViewController(settings: settings)
         settingsVC.onSettingsChanged = { [weak self] newSettings in
-            guard let self = self else { return  }
-//            self.settings = newSettings
-//            self.applySettings(newSettings)
+            guard let self = self else { return }
             SettingsStorage.save(newSettings)
             self.applySettings(newSettings)
         }
@@ -441,48 +586,44 @@ extension DiceViewController {
         navigationController?.pushViewController(settingsVC, animated: true)
     }
     
-    //MARK: - Reset Button Tap Action
-//    @objc func resetScores() {
-//        lightHaptic.impactOccurred()
-//        model.resetAllScores()
-//        scoresView.updateData(players: model.data.players)
-//        
-//        updateResetButtonState()
-//    }
+    // MARK: - Reset Scores Button
     
+    /// Shows an alert to confirm resetting all scores.
     @objc func resetScores() {
         let alert = UIAlertController(
             title: "Reset Scores",
             message: "Are you sure you want to reset all scores?",
             preferredStyle: .alert
         )
-
-        // YES
+        
+        // Confirm reset
         let yesAction = UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
             guard let self = self else { return }
-
+            
             self.lightHaptic?.impactOccurred()
-
+            
             self.model.resetAllScores()
             GameStorage.save(model.data)
             
             self.scoresView.updateData(players: self.model.data.players)
             self.updateResetButtonState()
         }
-
-        // CANCEL
+        
+        // Cancel reset
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
-
+        
         alert.addAction(yesAction)
         alert.addAction(cancelAction)
-
+        
         present(alert, animated: true)
     }
 }
 
+// MARK: - Long Press Handling
+
 extension DiceViewController {
-    //MARK: - Long Press Roll Button Action
-    //Long Press
+    
+    /// Handles long-press gesture on the roll button to show animation and progress.
     @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         switch gesture.state {
         case .began:
@@ -494,13 +635,12 @@ extension DiceViewController {
             guard !hasFinalizedRoll else { return }
             finishRollingAnimation()
             
-
         default:
             break
         }
     }
     
-    //Start Animation
+    /// Starts dice rolling animation and progress bar updating during long press.
     private func startRollingAnimation() {
         lightHaptic.impactOccurred()
         holdStartTime = Date()
@@ -508,31 +648,49 @@ extension DiceViewController {
         progressView.setAlphaAnimated(1.0)
         
         rollAnimationTimer?.invalidate()
-        rollAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            self?.dice1.image = UIImage(named: self?.model.setDice(score: self?.model.roll() ?? 0, color: self?.dice1Color ?? .blackRed) ?? "")
-            self?.dice2.image = UIImage(named: self?.model.setDice(score: self?.model.roll() ?? 0, color: self?.dice2Color ?? .WhiteBlue) ?? "")
+        rollAnimationTimer = Timer.scheduledTimer(
+            withTimeInterval: 0.1,
+            repeats: true
+        ) { [weak self] _ in
+            self?.dice1.image = UIImage(
+                named: self?.model.setDice(
+                    score: self?.model.roll() ?? 0,
+                    color: self?.dice1Color ?? .blackRed
+                ) ?? ""
+            )
+            self?.dice2.image = UIImage(
+                named: self?.model.setDice(
+                    score: self?.model.roll() ?? 0,
+                    color: self?.dice2Color ?? .WhiteBlue
+                ) ?? ""
+            )
         }
         
-        // контроль максимальных 5 секунд
+        // Track hold duration and update progress bar.
         holdDurationTimer?.invalidate()
-        holdDurationTimer = Timer.scheduledTimer(withTimeInterval: 0.01, repeats: true) { [weak self] timer in
+        holdDurationTimer = Timer.scheduledTimer(
+            withTimeInterval: 0.01,
+            repeats: true
+        ) { [weak self] _ in
             guard let self = self else { return }
             
             let elapsed = Date().timeIntervalSince(self.holdStartTime ?? Date())
-            progressView.progress = Float(elapsed/maxHoldTime)
+            progressView.progress = Float(elapsed / maxHoldTime)
+            
             if elapsed >= self.maxHoldTime {
                 hasFinalizedRoll = true
                 self.finishRollingAnimation()
             }
         }
     }
-    //End Animation
+    
+    /// Finalizes dice roll after long press ends or time limit is reached.
     private func finishRollingAnimation() {
         lightHaptic.impactOccurred()
         rollAnimationTimer?.invalidate()
         holdDurationTimer?.invalidate()
         
-        // итоговый бросок
+        // Final roll
         let r1 = model.roll()
         let r2 = model.roll()
         
@@ -542,14 +700,18 @@ extension DiceViewController {
         let sum = (settings.isTwoDicesEnabled ? r1 + r2 + 2 : r1 + 1)
         popUpMessage(text: "+\(sum)")
         
-        // обновление данных игрока и UI
+        // Update player scores and UI
         updateCurrentPlayer(sum: sum)
     }
 }
 
+// MARK: - Game & Settings Updates
+
 extension DiceViewController {
-    //MARK: - Update Players Data
-    //Current Player
+    
+    // MARK: - Player Data
+    
+    /// Updates current player stats with new roll result.
     private func updateCurrentPlayer(sum: Int) {
         let currentIndex = playerSegmentedControl.selectedSegmentIndex
         var currentPlayer = model.data.players[currentIndex]
@@ -570,36 +732,39 @@ extension DiceViewController {
         updateResetButtonState()
     }
     
-    //Settins
+    // MARK: - Apply Settings
+    
+    /// Applies new settings to UI and game state.
     func applySettings(_ newSettings: Settings) {
         settings = newSettings
         
-        // 1. Обновляем список игроков по настройкам
-        updatePlayers(settings)  // ← ЭТО САМОЕ ВАЖНОЕ
+        // 1. Update players list according to settings.
+        updatePlayers(settings)
         
-        // 2. Обновляем segmented control на основе нового списка игроков
+        // 2. Rebuild segmented control from updated players.
         updateSegmentedControl()
         
-        // 3. Обновляем количество кубиков
+        // 3. Update dice count and size.
         updateDiceVisibility()
         applyDiceSizeBasedOnSettings()
         
-        // 4. Экран всегда включён
+        // 4. Keep the screen awake if enabled in settings.
         UIApplication.shared.isIdleTimerDisabled = settings.isScreenAlwaysOnEnabled
         
-        // 5. Обновляем ScoreView
+        // 5. Refresh scores view with current layout and active player.
         scoresView.update(players: model.data.players, layout: currentLayout)
         scoresView.updateLablesColors(activePlayer: playerSegmentedControl.selectedSegmentIndex)
     }
     
-    //Players
+    /// Updates the players array based on the current settings
+    /// (enabling or disabling Player 3 and Player 4).
     private func updatePlayers(_ settings: Settings) {
         var updatedPlayers: [Player] = []
         
-        // P1 ALWAYS EXISTS
+        // Player 1 always exists
         updatedPlayers.append(model.data.players[0])
         
-        // P2 ALWAYS EXISTS
+        // Player 2 always exists
         updatedPlayers.append(model.data.players[1])
         
         // Player 3
@@ -621,19 +786,21 @@ extension DiceViewController {
         }
         
         model.data.players = updatedPlayers
-        
         model.data.updateRanks()
         
         updateSegmentedControl()
     }
 }
 
-//MARK: - Swipes
+// MARK: - Swipes
+
 extension DiceViewController {
+    
+    /// Adds left and right swipe gestures to the first dice.
     func addSwipeGesturesToDice() {
         let left = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
         left.direction = .left
-
+        
         let right = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
         right.direction = .right
         
@@ -642,17 +809,21 @@ extension DiceViewController {
         dice1.addGestureRecognizer(right)
     }
     
+    /// Handles swipe gestures on the first dice (reserved for future behavior).
     @objc func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
         if gesture.direction == .left {
-            
+            // Future behavior for left swipe.
         } else {
-            
+            // Future behavior for right swipe.
         }
     }
 }
 
+// MARK: - UI State Helpers
+
 extension DiceViewController {
-    //MARK: - Update UI Elements States
+    
+    /// Rebuilds segmented control titles based on current players list.
     func updateSegmentedControl() {
         playerSegmentedControl.removeAllSegments()
         
@@ -663,6 +834,7 @@ extension DiceViewController {
         playerSegmentedControl.selectedSegmentIndex = 0
     }
     
+    /// Shows or hides the second dice depending on settings and animates size changes.
     func updateDiceVisibility() {
         if settings.isTwoDicesEnabled {
             if !diceStack.arrangedSubviews.contains(dice2) {
@@ -670,7 +842,7 @@ extension DiceViewController {
             }
             dice2.isHidden = false
             
-            // вернуть нормальный размер обоих кубиков
+            // Restore normal size for both dice.
             UIView.animate(withDuration: 0.15) { [self] in
                 dice1.transform = .identity
                 dice2.transform = .identity
@@ -682,24 +854,26 @@ extension DiceViewController {
                 dice2.removeFromSuperview()
             }
             
-            // увеличить кубик
+            // Enlarge single dice.
             UIView.animate(withDuration: 0.15) {
                 self.dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
             }
         }
     }
     
+    /// Enables or disables the reset button depending on whether scores exist.
     func updateResetButtonState() {
         resetScoreButton.isEnabled = model.hasScores
     }
     
+    /// Applies size transform to dice based on current settings.
     func applyDiceSizeBasedOnSettings() {
         if settings.isTwoDicesEnabled {
-            // Два кубика: нормальный размер
+            // Two dice: normal size
             dice1.transform = .identity
             dice2.transform = .identity
         } else {
-            // Один кубик: увеличенный размер
+            // Single dice: enlarged
             dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
         }
     }

@@ -2,13 +2,13 @@
 //  Constants.swift
 //  DicePro
 //
-//  Created by Dmitri  on 30.11.25.
+//  Created by Dmitri on 30.11.25.
 //
 
 import UIKit
 
 // MARK: - Screen Classes
-/// Categorizes devices for UI scaling.
+/// Represents major device categories for responsive UI scaling.
 enum ScreenClass {
     case se
     case mini
@@ -17,7 +17,7 @@ enum ScreenClass {
     case iPad
 }
 
-/// Returns the current device class used for adaptive UI sizing.
+/// Detects the current device class based on screen size and interface idiom.
 var screenClass: ScreenClass {
     if UIDevice.current.userInterfaceIdiom == .pad {
         return .iPad
@@ -34,8 +34,8 @@ var screenClass: ScreenClass {
 }
 
 // MARK: - Scale Factor
-/// Global UI scale factor based on device class.
-/// Used across the app to proportionally size elements.
+/// Global UI scale factor applied across the app.
+/// Ensures consistent sizing across different device classes.
 var scaleFactor: CGFloat {
     switch screenClass {
     case .se:     return 0.86
@@ -46,28 +46,30 @@ var scaleFactor: CGFloat {
     }
 }
 
-
+// MARK: - Player Names
+/// Standardized player identifiers used in UI and model.
 enum Players: String {
     case player1 = "P1"
     case player2 = "P2"
     case player3 = "P3"
     case player4 = "P4"
     
-    var name: String { self.rawValue }
+    var name: String { rawValue }
 }
 
-
+// MARK: - Layout Types
+/// Defines the visual layout mode for ScoresView.
 enum LayoutType: String {
-        case row
-        case grid
-        
-        /// SF Symbol name representing each layout visually.
-        var iconName: String {
-            switch self {
-            case .row:
-                return "circle.grid.2x1.fill"
-            case .grid:
-                return "circle.grid.3x3.fill"
-            }
+    case row
+    case grid
+    
+    /// SF Symbol representing each layout mode.
+    var iconName: String {
+        switch self {
+        case .row:
+            return "circle.grid.2x1.fill"
+        case .grid:
+            return "circle.grid.3x3.fill"
         }
     }
+}

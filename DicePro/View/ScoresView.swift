@@ -2,30 +2,35 @@
 //  ValueView.swift
 //  DicePro
 //
-//  Created by Dmitri  on 01.12.25.
+//  Created by Dmitri on 01.12.25.
 //
 
 import UIKit
 
+// MARK: - ScoresView
+/// Displays players' attempts, scores and ranks in two layout modes:
+/// - Row: focuses on the active player
+/// - Grid: shows all players equally
 final class ScoresView: UIView {
-
+    
     // MARK: - Private Properties
-    private var labels: [[UILabel]] = []
-    private var verticalStack = UIStackView()
+    private var labels: [[UILabel]] = []       // Matrix of labels (per player / per value)
+    private var verticalStack = UIStackView()  // Root container stack
     private(set) var currentLayout: LayoutType = .row
-
+    
     // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupAppearance()
     }
-
+    
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         setupAppearance()
     }
-
+    
     // MARK: - Appearance
+    /// Sets up the rounded background and shadow style.
     private func setupAppearance() {
         let radius: CGFloat = 20 * scaleFactor
         backgroundColor = .systemBackground
@@ -35,24 +40,26 @@ final class ScoresView: UIView {
         layer.shadowRadius = 4
         layer.shadowOffset = CGSize(width: 0, height: 2.5)
     }
-
-    // MARK: - Update from Controller
+    
+    // MARK: - Update From Controller
+    /// Rebuilds the view according to current players and layout.
     func update(players: [Player], layout: LayoutType) {
         currentLayout = layout
         rebuildLayout(players: players)
     }
-
+    
+    /// Updates values inside existing labels without rebuilding the layout.
     func updateData(players: [Player]) {
         guard !labels.isEmpty else { return }
-
+        
         if currentLayout == .row {
             let activeIndex = players.firstIndex(where: { $0.isActive }) ?? 0
             let p = players[activeIndex]
-
+            
             labels[0][0].text = "\(p.attempts.formatted(.number))"
             labels[0][1].text = "\(p.rank)"
             labels[0][2].text = "\(p.totalScore.formatted(.number))"
-
+            
         } else {
             for (i, p) in players.enumerated() {
                 labels[i][0].text = "\(p.attempts.formatted(.number))"
@@ -63,10 +70,12 @@ final class ScoresView: UIView {
     }
 }
 
-// MARK: - Private UI Builders
- extension ScoresView {
-     
-     //MARK: - Create Labels
+
+// MARK: - UI Builders
+extension ScoresView {
+    
+    // MARK: Create Label
+    /// Creates a single animated label with default formatting.
     func createLabel(alignment: NSTextAlignment) -> UILabel {
         let lbl = AnimatedLabel()
         lbl.text = "0"
@@ -77,8 +86,9 @@ final class ScoresView: UIView {
         lbl.minimumScaleFactor = 0.7
         return lbl
     }
-     
-     //MARK: - Create Horizontal Stack
+    
+    // MARK: Create Horizontal Stack
+    /// Builds a horizontal row of labels.
     func makeHStack(_ labels: [UILabel]) -> UIStackView {
         let stack = UIStackView(arrangedSubviews: labels)
         stack.axis = .horizontal
@@ -87,72 +97,68 @@ final class ScoresView: UIView {
         stack.distribution = .fill
         return stack
     }
-     
-     func makeVStack(distribution: UIStackView.Distribution) -> UIStackView {
-         let stack = UIStackView()
-         stack.axis = .vertical
-         stack.spacing = 6
-         stack.distribution = distribution
-         stack.translatesAutoresizingMaskIntoConstraints = false
-         return stack
-     }
-     
-     
-     //MARK: - Update Layout
+    
+    // MARK: Create Vertical Stack
+    func makeVStack(distribution: UIStackView.Distribution) -> UIStackView {
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 6
+        stack.distribution = distribution
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }
+    
+    // MARK: - Layout Construction
+    /// Completely rebuilds the layout for the given players.
     func rebuildLayout(players: [Player]) {
-        // 1. Clear previous content
+        
+        // 1. Remove old content
         verticalStack.removeFromSuperview()
         labels.removeAll()
-
-        // 2. Create fresh vertical stack
-//        verticalStack = UIStackView()
-//        verticalStack.axis = .vertical
-//        verticalStack.spacing = 6
-//        verticalStack.distribution = .fillEqually
-//        verticalStack.translatesAutoresizingMaskIntoConstraints = false
         
-        let distribution: UIStackView.Distribution = currentLayout == .row ? .fill : .fillEqually
+        let distribution: UIStackView.Distribution =
+        currentLayout == .row ? .fill : .fillEqually
+        
         verticalStack = makeVStack(distribution: distribution)
         addSubview(verticalStack)
-
+        
         NSLayoutConstraint.activate([
             verticalStack.topAnchor.constraint(equalTo: topAnchor, constant: 8),
             verticalStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             verticalStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
             verticalStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
         ])
-
-        // 3. Build rows depending on layout
+        
+        // 2. Build based on layout mode
         if currentLayout == .row {
-
+            
             labels = Array(repeating: [], count: 1)
-
+            
             let attempts = createLabel(alignment: .left)
             let rank = createLabel(alignment: .right)
             let score = createLabel(alignment: .right)
-
+            
             labels[0].append(contentsOf: [attempts, rank, score])
-
+            
             let top = makeHStack([attempts, rank])
             let bottom = makeHStack([score])
-
+            
             verticalStack.addArrangedSubview(top)
             verticalStack.addArrangedSubview(bottom)
-
+            
         } else {
-
+            
             labels = Array(repeating: [], count: players.count)
-
+            
             for i in 0..<players.count {
-
                 let attempts = createLabel(alignment: .left)
                 let score = createLabel(alignment: .right)
                 let rank = createLabel(alignment: .right)
                 
                 rank.widthAnchor.constraint(equalToConstant: 60).isActive = true
-
+                
                 labels[i].append(contentsOf: [attempts, score, rank])
-
+                
                 let row = makeHStack([attempts, score, rank])
                 verticalStack.addArrangedSubview(row)
             }
@@ -162,25 +168,31 @@ final class ScoresView: UIView {
         updateLablesColors()
     }
     
-     //MARK: - Update Colors
+    // MARK: - Label Styling
+    /// Applies colors and fonts depending on active player and layout mode.
     func updateLablesColors(activePlayer: Int? = nil) {
         
-        let attemptColor: UIColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00).withAlphaComponent(0.5) //red
-        let rankColor: UIColor = UIColor(red: 0.60, green: 0.56, blue: 0.00, alpha: 1.00).withAlphaComponent(0.5) //gold
-        let scoreColor: UIColor = UIColor(red: 0.03, green: 0.18, blue: 0.60, alpha: 1.00) // blue
+        let attemptColor = AppColors.coolRed
+        let rankColor = AppColors.darkGold.withAlphaComponent(0.5)
+        let scoreColor = AppColors.mazarineBlue
         
         let firstMaxFont: CGFloat = 60 * scaleFactor
-        let secondMaxfont: CGFloat = 45 * scaleFactor
-        let minfont: CGFloat = 26 * scaleFactor
-        //let firstSize: CGFloat = firstMaxFont - (firstMaxFont - minfont) / 4 * Double(labels.count)
-        let secondSize: CGFloat = secondMaxfont - (secondMaxfont - minfont) / 4 * Double(labels.count)
+        let secondMaxFont: CGFloat = 45 * scaleFactor
+        let minFont: CGFloat = 26 * scaleFactor
+        let secondSize: CGFloat = secondMaxFont - (secondMaxFont - minFont) / 4 * Double(labels.count)
         
-        let attemptFont: UIFont = currentLayout == .row ? .rounded(ofSize: secondMaxfont, weight: .medium) : .rounded(ofSize: secondSize, weight: .medium)
-        let rankFont: UIFont = currentLayout == .row ? .rounded(ofSize: secondMaxfont, weight: .medium) : .rounded(ofSize: secondSize, weight: .medium)
-        let scoreFont: UIFont = currentLayout == .row ? .rounded(ofSize: firstMaxFont, weight: .medium) : .rounded(ofSize: secondSize, weight: .medium)
+        let attemptFont: UIFont =
+        currentLayout == .row ? .rounded(ofSize: secondMaxFont, weight: .medium)
+        : .rounded(ofSize: secondSize, weight: .medium)
+        
+        let rankFont = attemptFont
+        let scoreFont: UIFont =
+        currentLayout == .row ? .rounded(ofSize: firstMaxFont, weight: .medium)
+        : .rounded(ofSize: secondSize, weight: .medium)
         
         if currentLayout == .row {
-            for (_,label) in labels.enumerated() {
+            
+            for (_, label) in labels.enumerated() {
                 label[0].textColor = attemptColor
                 label[2].textColor = scoreColor
                 label[1].textColor = rankColor
@@ -189,7 +201,9 @@ final class ScoresView: UIView {
                 label[2].font = scoreFont
                 label[1].font = rankFont
             }
+            
         } else {
+            
             for (index, label) in labels.enumerated() {
                 if index == (activePlayer ?? 0) {
                     label[0].textColor = attemptColor
@@ -209,10 +223,13 @@ final class ScoresView: UIView {
     }
 }
 
+
+// MARK: - Rounded Font Helper
 extension UIFont {
+    /// Creates a system rounded font if available.
     static func rounded(ofSize size: CGFloat, weight: UIFont.Weight) -> UIFont {
-        let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
-        let descriptor = systemFont.fontDescriptor.withDesign(.rounded)
-        return UIFont(descriptor: descriptor ?? systemFont.fontDescriptor, size: size)
+        let base = UIFont.systemFont(ofSize: size, weight: weight)
+        let descriptor = base.fontDescriptor.withDesign(.rounded)
+        return UIFont(descriptor: descriptor ?? base.fontDescriptor, size: size)
     }
 }

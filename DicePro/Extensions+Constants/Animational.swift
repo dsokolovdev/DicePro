@@ -10,14 +10,14 @@ import UIKit
 // MARK: - AnimatedLabel
 /// UILabel subclass that animates text changes with a fade transition.
 final class AnimatedLabel: UILabel {
-
+    
     override var text: String? {
         didSet {
             guard oldValue != text else { return }
-
+            
             let newText = text
             super.text = oldValue // temporarily revert to animate to new text
-
+            
             UIView.transition(
                 with: self,
                 duration: 0.15,
@@ -50,7 +50,7 @@ extension UIView {
     /// Applies a soft bounce animation to the view using a spring effect.
     func bounce(scale: CGFloat = 1.15, duration: TimeInterval = 0.25) {
         self.transform = CGAffineTransform(scaleX: scale, y: scale)
-
+        
         UIView.animate(
             withDuration: duration,
             delay: 0,
