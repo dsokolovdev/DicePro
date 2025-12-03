@@ -60,3 +60,17 @@ extension UIView {
         )
     }
 }
+
+extension UIProgressView {
+    func setAlphaAnimated(_ value: CGFloat, duration: TimeInterval = 0.25) {
+        UIView.animate(
+            withDuration: duration,
+            delay: 0,
+            options: [.curveEaseInOut, .allowUserInteraction],
+            animations: {
+                self.alpha = value
+            },
+            completion: nil
+        )
+    }
+}

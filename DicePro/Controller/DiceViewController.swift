@@ -34,6 +34,7 @@ class DiceViewController: UIViewController {
     private var diceStack: UIStackView!
     private var messageStack: UIStackView!
     private var labelMessage: UILabel!
+    private var progressView: UIProgressView!
     
     private var rollAnimationTimer: Timer?
     private var holdStartTime: Date?
@@ -60,6 +61,7 @@ class DiceViewController: UIViewController {
         setupScoresView()
         setupRollButton()
         setupDiceStack()
+        setupProgressBar()
         setupLabelMessage()
         applyDiceSizeBasedOnSettings()
         
@@ -300,6 +302,23 @@ extension DiceViewController {
         ])
     }
     
+    //MARK: - Progress Bar Setup
+    func setupProgressBar() {
+        progressView = UIProgressView(progressViewStyle: .default)
+        progressView.progress = 0.0
+        progressView.progressTintColor = UIColor(red: 0.68, green: 0.02, blue: 0.02, alpha: 1.00)
+        progressView.trackTintColor = .systemGray6
+        progressView.alpha = 0
+        
+        view.addSubview(progressView)
+        progressView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor) ,
+            progressView.widthAnchor.constraint(equalToConstant: 200 * scaleFactor),
+            progressView.topAnchor.constraint(equalTo: diceStack.bottomAnchor, constant: 40 * scaleFactor)
+        ])
+    }
+    
     
     //MARK: - Pop Up Label SetUp
     func setupLabelMessage () {
@@ -466,16 +485,15 @@ extension DiceViewController {
             startRollingAnimation()
             
         case .ended, .cancelled, .failed:
+            progressView.setAlphaAnimated(0.0)
+            progressView.progress = 0
             guard !hasFinalizedRoll else { return }
             finishRollingAnimation()
             
+
         default:
             break
         }
-        
-        //model.updateRanks()
-        
-        //updateResetButtonState()
     }
     
     //Start Animation
@@ -483,6 +501,7 @@ extension DiceViewController {
         lightHaptic.impactOccurred()
         holdStartTime = Date()
         hasFinalizedRoll = false
+        progressView.setAlphaAnimated(1.0)
         
         rollAnimationTimer?.invalidate()
         rollAnimationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
@@ -496,7 +515,7 @@ extension DiceViewController {
             guard let self = self else { return }
             
             let elapsed = Date().timeIntervalSince(self.holdStartTime ?? Date())
-            
+            progressView.progress = Float(elapsed/maxHoldTime)
             if elapsed >= self.maxHoldTime {
                 hasFinalizedRoll = true
                 self.finishRollingAnimation()

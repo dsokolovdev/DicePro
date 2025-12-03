@@ -175,9 +175,9 @@ final class ScoresView: UIView {
         //let firstSize: CGFloat = firstMaxFont - (firstMaxFont - minfont) / 4 * Double(labels.count)
         let secondSize: CGFloat = secondMaxfont - (secondMaxfont - minfont) / 4 * Double(labels.count)
         
-        let attemptFont: UIFont = currentLayout == .row ? .systemFont(ofSize: secondMaxfont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
-        let rankFont: UIFont = currentLayout == .row ? .systemFont(ofSize: secondMaxfont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
-        let scoreFont: UIFont = currentLayout == .row ? .systemFont(ofSize: firstMaxFont, weight: .medium) : .systemFont(ofSize: secondSize, weight: .medium)
+        let attemptFont: UIFont = currentLayout == .row ? .rounded(ofSize: secondMaxfont, weight: .medium) : .rounded(ofSize: secondSize, weight: .medium)
+        let rankFont: UIFont = currentLayout == .row ? .rounded(ofSize: secondMaxfont, weight: .medium) : .rounded(ofSize: secondSize, weight: .medium)
+        let scoreFont: UIFont = currentLayout == .row ? .rounded(ofSize: firstMaxFont, weight: .medium) : .rounded(ofSize: secondSize, weight: .medium)
         
         if currentLayout == .row {
             for (_,label) in labels.enumerated() {
@@ -206,5 +206,13 @@ final class ScoresView: UIView {
                 label[2].font = rankFont
             }
         }
+    }
+}
+
+extension UIFont {
+    static func rounded(ofSize size: CGFloat, weight: UIFont.Weight) -> UIFont {
+        let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
+        let descriptor = systemFont.fontDescriptor.withDesign(.rounded)
+        return UIFont(descriptor: descriptor ?? systemFont.fontDescriptor, size: size)
     }
 }
