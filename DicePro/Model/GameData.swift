@@ -6,7 +6,7 @@
 //
 import Foundation
 
-struct GameData {
+struct GameData: Codable {
     var players: [Player]
     
     mutating func updateRanks() {
@@ -27,7 +27,7 @@ struct GameData {
 }
 
 
-struct Player: Equatable, Comparable {
+struct Player: Codable, Equatable, Comparable {
     var name: String
     var totalScore: Int
     var currentScore: Int

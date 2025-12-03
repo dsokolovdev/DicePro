@@ -6,7 +6,7 @@
 //
 import UIKit
 
-struct Settings {
+struct Settings: Codable {
     var isPlayer3Enabled: Bool
     var isPlayer4Enabled: Bool
     var isTwoDicesEnabled: Bool

@@ -9,7 +9,8 @@ import UIKit
 
 class DiceViewController: UIViewController {
     private var model: DiceModel
-    var settings = Settings.defaults
+    //var settings = Settings.defaults
+    var settings = SettingsStorage.load()
     private var scoresView: ScoresView!
     private var lightHaptic: UIImpactFeedbackGenerator!
     private var currentLayout: LayoutType = .row {
@@ -40,8 +41,9 @@ class DiceViewController: UIViewController {
     private let maxHoldTime: TimeInterval = 7
     private var hasFinalizedRoll = false
     
-    init(model: DiceModel) {
-        self.model = model
+    init() {
+        self.model = DiceModel()
+        self.model.data = GameStorage.load()
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -59,6 +61,7 @@ class DiceViewController: UIViewController {
         setupRollButton()
         setupDiceStack()
         setupLabelMessage()
+        applyDiceSizeBasedOnSettings()
         
         scoresView.update(players: model.data.players, layout: currentLayout)
         if #available(iOS 17.5, *) {
@@ -380,6 +383,8 @@ extension DiceViewController {
         
         updateCurrentPlayer(sum: sum)
         popUpMessage(text: string)
+        
+        GameStorage.save(model.data)
 
     }
     
@@ -404,7 +409,9 @@ extension DiceViewController {
         let settingsVC = SettingsViewController(settings: settings)
         settingsVC.onSettingsChanged = { [weak self] newSettings in
             guard let self = self else { return  }
-            self.settings = newSettings
+//            self.settings = newSettings
+//            self.applySettings(newSettings)
+            SettingsStorage.save(newSettings)
             self.applySettings(newSettings)
         }
         
@@ -412,12 +419,41 @@ extension DiceViewController {
     }
     
     //MARK: - Reset Button Tap Action
+//    @objc func resetScores() {
+//        lightHaptic.impactOccurred()
+//        model.resetAllScores()
+//        scoresView.updateData(players: model.data.players)
+//        
+//        updateResetButtonState()
+//    }
+    
     @objc func resetScores() {
-        lightHaptic.impactOccurred()
-        model.resetAllScores()
-        scoresView.updateData(players: model.data.players)
-        
-        updateResetButtonState()
+        let alert = UIAlertController(
+            title: "Reset Scores",
+            message: "Are you sure you want to reset all scores?",
+            preferredStyle: .alert
+        )
+
+        // YES
+        let yesAction = UIAlertAction(title: "Reset", style: .destructive) { [weak self] _ in
+            guard let self = self else { return }
+
+            self.lightHaptic?.impactOccurred()
+
+            self.model.resetAllScores()
+            GameStorage.save(model.data)
+            
+            self.scoresView.updateData(players: self.model.data.players)
+            self.updateResetButtonState()
+        }
+
+        // CANCEL
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
+
+        alert.addAction(yesAction)
+        alert.addAction(cancelAction)
+
+        present(alert, animated: true)
     }
 }
 
@@ -523,6 +559,7 @@ extension DiceViewController {
         
         // 3. Обновляем количество кубиков
         updateDiceVisibility()
+        applyDiceSizeBasedOnSettings()
         
         // 4. Экран всегда включён
         UIApplication.shared.isIdleTimerDisabled = settings.isScreenAlwaysOnEnabled
@@ -608,5 +645,16 @@ extension DiceViewController {
     
     func updateResetButtonState() {
         resetScoreButton.isEnabled = model.hasScores
+    }
+    
+    func applyDiceSizeBasedOnSettings() {
+        if settings.isTwoDicesEnabled {
+            // Два кубика: нормальный размер
+            dice1.transform = .identity
+            dice2.transform = .identity
+        } else {
+            // Один кубик: увеличенный размер
+            dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
+        }
     }
 }
