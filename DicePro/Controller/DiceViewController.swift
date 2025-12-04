@@ -149,7 +149,7 @@ class DiceViewController: UIViewController {
         setupDiceStack()
         setupProgressBar()
         setupLabelMessage()
-        applyDiceSizeBasedOnSettings()
+        updateDiceLayout()
         
         scoresView.update(players: model.data.players, layout: currentLayout)
         
@@ -788,8 +788,7 @@ extension DiceViewController {
         updateSegmentedControl()
         
         // 3. Update dice count and size.
-        updateDiceVisibility()
-        applyDiceSizeBasedOnSettings()
+        updateDiceLayout()
         
         // 4. Keep the screen awake if enabled in settings.
         UIApplication.shared.isIdleTimerDisabled = settings.isScreenAlwaysOnEnabled
@@ -877,49 +876,25 @@ extension DiceViewController {
         playerSegmentedControl.selectedSegmentIndex = 0
     }
     
-    /// Shows or hides the second dice depending on settings and animates size changes.
-    func updateDiceVisibility() {
+    /// Adjusts dice visibility and size according to settings with animated layout updates.
+    func updateDiceLayout() {
         let normalSize: CGFloat = 160 * scaleFactor
         let bigSize: CGFloat = 200 * scaleFactor
-
+        
+        //Shows or hides the second dice depending on settings and animates size changes.
         if settings.isTwoDicesEnabled {
             if !diceStack.arrangedSubviews.contains(dice2) {
                 diceStack.addArrangedSubview(dice2)
             }
             dice2.isHidden = false
-
-            UIView.animate(withDuration: 0.2) {
-                self.dice1WidthConstraint.constant = normalSize
-                self.dice1HeightConstraint.constant = normalSize
-                self.dice2WidthConstraint.constant = normalSize
-                self.dice2HeightConstraint.constant = normalSize
-                self.view.layoutIfNeeded()
-            }
-
         } else {
             if diceStack.arrangedSubviews.contains(dice2) {
                 diceStack.removeArrangedSubview(dice2)
                 dice2.removeFromSuperview()
             }
-
-            UIView.animate(withDuration: 0.2) {
-                self.dice1WidthConstraint.constant = bigSize
-                self.dice1HeightConstraint.constant = bigSize
-                self.view.layoutIfNeeded()
-            }
         }
-    }
-    
-    /// Enables or disables the reset button depending on whether scores exist.
-    func updateResetButtonState() {
-        resetScoreButton.isEnabled = model.hasScores
-    }
-    
-    /// Applies size transform to dice based on current settings.
-    func applyDiceSizeBasedOnSettings() {
-        let normalSize: CGFloat = 160 * scaleFactor
-        let bigSize: CGFloat = 200 * scaleFactor
-
+        
+        //Applies size transform to dice based on current settings.
         UIView.animate(withDuration: 0.2) {
             if self.settings.isTwoDicesEnabled {
                 // два кубика — оба нормального размера
@@ -937,5 +912,10 @@ extension DiceViewController {
             
             self.view.layoutIfNeeded()
         }
+    }
+    
+    /// Enables or disables the reset button depending on whether scores exist.
+    func updateResetButtonState() {
+        resetScoreButton.isEnabled = model.hasScores
     }
 }
