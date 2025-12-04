@@ -7,6 +7,12 @@
 
 import UIKit
 
+// MARK: - Screen Size Flags
+/// Detects small screen devices (e.g., iPhone SE / Mini).
+var isSmallScreen: Bool {
+    UIScreen.main.bounds.height < 750
+}
+
 // MARK: - Screen Classes
 /// Represents major device categories for responsive UI scaling.
 enum ScreenClass {

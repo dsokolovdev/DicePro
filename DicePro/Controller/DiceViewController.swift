@@ -62,6 +62,18 @@ class DiceViewController: UIViewController {
     /// Second dice image view.
     private let dice2 = UIImageView()
     
+    /// Dice1 width constraint.
+    private var dice1WidthConstraint: NSLayoutConstraint!
+    
+    /// Dice1 height constraint.
+    private var dice1HeightConstraint: NSLayoutConstraint!
+    
+    /// Dice2 width constraint.
+    private var dice2WidthConstraint: NSLayoutConstraint!
+    
+    /// Dice2 height constraint.
+    private var dice2HeightConstraint: NSLayoutConstraint!
+    
     /// Color scheme for the first dice.
     private let dice1Color = DiceModel.Dices.WhiteBlue
     
@@ -286,13 +298,13 @@ extension DiceViewController {
     /// Configures the main Roll button and the long-press gesture.
     func setupRollButton() {
         rollButton = UIButton(type: .system)
-        
+        let size = 24 * scaleFactor
         if #available(iOS 26.0, *) {
             var configuration = UIButton.Configuration.glass()
             configuration.attributedTitle = AttributedString(
                 "Roll",
                 attributes: AttributeContainer([
-                    .font: UIFont.systemFont(ofSize: 24 * scaleFactor, weight: .semibold),
+                    .font: UIFont.systemFont(ofSize: size, weight: .semibold),
                     .foregroundColor: UIColor.white
                 ])
             )
@@ -301,7 +313,7 @@ extension DiceViewController {
         } else {
             rollButton.setTitle("Roll", for: .normal)
             rollButton.titleLabel?.font = UIFont.systemFont(
-                ofSize: 24 * scaleFactor,
+                ofSize: size,
                 weight: .semibold
             )
             rollButton.setTitleColor(.white, for: .normal)
@@ -326,12 +338,16 @@ extension DiceViewController {
         
         view.addSubview(rollButton)
         
+        let c: CGFloat = 100 * scaleFactor
+        let bOffset: CGFloat = isSmallScreen ? 0.4 * c : c
+        let w: CGFloat = 135 * scaleFactor
+        let h: CGFloat  = 64 * scaleFactor
         rollButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            rollButton.widthAnchor.constraint(equalToConstant: 135 * scaleFactor),
-            rollButton.heightAnchor.constraint(equalToConstant: 64 * scaleFactor),
+            rollButton.widthAnchor.constraint(equalToConstant: w),
+            rollButton.heightAnchor.constraint(equalToConstant: h),
             rollButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            rollButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -120 * scaleFactor)
+            rollButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -bOffset)
         ])
     }
     
@@ -359,9 +375,9 @@ extension DiceViewController {
         
         let activeColor = AppColors.mazarineBlue
         let inactiveColor = UIColor.secondaryLabel
-        let fontSize: CGFloat = 14 * scaleFactor
-        let activeFont = UIFont.systemFont(ofSize: fontSize, weight: .semibold)
-        let inactiveFont = UIFont.systemFont(ofSize: fontSize, weight: .medium)
+        let size: CGFloat = 14 * scaleFactor
+        let activeFont = UIFont.systemFont(ofSize: size, weight: .semibold)
+        let inactiveFont = UIFont.systemFont(ofSize: size, weight: .medium)
         
         playerSegmentedControl = UISegmentedControl(items: items)
         playerSegmentedControl.selectedSegmentIndex = 0
@@ -410,11 +426,13 @@ extension DiceViewController {
         scoresView.layer.masksToBounds = false
         view.addSubview(scoresView)
         
+        let c: CGFloat = 8 * scaleFactor
+        let h: CGFloat = 150 * scaleFactor
         NSLayoutConstraint.activate([
-            scoresView.topAnchor.constraint(equalTo: playerSegmentedControlBarView.bottomAnchor, constant: 8),
+            scoresView.topAnchor.constraint(equalTo: playerSegmentedControlBarView.bottomAnchor, constant: c),
             scoresView.leadingAnchor.constraint(equalTo: view.layoutMarginsGuide.leadingAnchor),
             scoresView.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
-            scoresView.heightAnchor.constraint(equalToConstant: 150 * scaleFactor)
+            scoresView.heightAnchor.constraint(equalToConstant: h)
         ])
     }
     
@@ -426,8 +444,9 @@ extension DiceViewController {
         diceStack = UIStackView(arrangedSubviews: diceArray)
         diceStack.translatesAutoresizingMaskIntoConstraints = false
         diceStack.axis = .horizontal
-        diceStack.spacing = 16
+        diceStack.spacing = 16 * scaleFactor
         diceStack.distribution = .fillEqually
+        diceStack.alignment = .center
         
         view.addSubview(diceStack)
         addSwipeGesturesToDice()
@@ -435,12 +454,32 @@ extension DiceViewController {
         dice1.image = UIImage(named: model.setDice(score: model.roll(), color: dice1Color))
         dice2.image = UIImage(named: model.setDice(score: model.roll(), color: dice2Color))
         
-        dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
+        //dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
         
+        //let c: CGFloat = 90 * scaleFactor
+        
+        let baseSize: CGFloat = 160 * scaleFactor
+
+        dice1WidthConstraint  = dice1.widthAnchor.constraint(equalToConstant: baseSize)
+        dice1HeightConstraint = dice1.heightAnchor.constraint(equalToConstant: baseSize)
+        dice2WidthConstraint  = dice2.widthAnchor.constraint(equalToConstant: baseSize)
+        dice2HeightConstraint = dice2.heightAnchor.constraint(equalToConstant: baseSize)
+
+        // для начала второй кубик тоже настраиваем по размеру
+        dice2WidthConstraint.isActive = true
+        dice2HeightConstraint.isActive = true
+
         NSLayoutConstraint.activate([
             diceStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            diceStack.bottomAnchor.constraint(equalTo: rollButton.topAnchor, constant: -90 * scaleFactor)
+            diceStack.bottomAnchor.constraint(equalTo: rollButton.topAnchor),
+            diceStack.topAnchor.constraint(equalTo: scoresView.bottomAnchor),
+            dice1WidthConstraint,
+            dice1HeightConstraint
         ])
+        
+        //let scale =  isSmallScreen ? scaleFactor * 0.95 : scaleFactor
+       // dice1.transform = CGAffineTransform(scaleX: scale, y: scale)
+        //dice1.transform = CGAffineTransform(scaleX: scale, y: scale)
     }
     
     // MARK: - Progress Bar Setup
@@ -456,10 +495,12 @@ extension DiceViewController {
         view.addSubview(progressView)
         progressView.translatesAutoresizingMaskIntoConstraints = false
         
+        let c: CGFloat = 40 * scaleFactor
+        let w: CGFloat = 200 * scaleFactor
         NSLayoutConstraint.activate([
             progressView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            progressView.widthAnchor.constraint(equalToConstant: 200 * scaleFactor),
-            progressView.topAnchor.constraint(equalTo: diceStack.bottomAnchor, constant: 40 * scaleFactor)
+            progressView.widthAnchor.constraint(equalToConstant: w),
+            progressView.topAnchor.constraint(equalTo: dice1.bottomAnchor, constant: c)
         ])
     }
     
@@ -474,7 +515,7 @@ extension DiceViewController {
         labelMessage.textAlignment = .center
         labelMessage.font = UIFont.systemFont(ofSize: 18 * scaleFactor, weight: .medium)
         
-        labelMessage.layer.cornerRadius = 20
+        labelMessage.layer.cornerRadius = 20 * scaleFactor
         labelMessage.layer.masksToBounds = true
         labelMessage.alpha = 0
         
@@ -490,12 +531,14 @@ extension DiceViewController {
         
         view.addSubview(messageStack)
         
+        let w: CGFloat = 70 * scaleFactor
+        let h: CGFloat = 40 * scaleFactor
         NSLayoutConstraint.activate([
-            messageStack.bottomAnchor.constraint(equalTo: diceStack.topAnchor),
+            messageStack.bottomAnchor.constraint(equalTo: dice1.topAnchor),
             messageStack.topAnchor.constraint(equalTo: scoresView.bottomAnchor),
             messageStack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            labelMessage.widthAnchor.constraint(equalToConstant: 70 * scaleFactor),
-            labelMessage.heightAnchor.constraint(equalToConstant: 40 * scaleFactor)
+            labelMessage.widthAnchor.constraint(equalToConstant: w),
+            labelMessage.heightAnchor.constraint(equalToConstant: h)
         ])
     }
 }
@@ -836,27 +879,33 @@ extension DiceViewController {
     
     /// Shows or hides the second dice depending on settings and animates size changes.
     func updateDiceVisibility() {
+        let normalSize: CGFloat = 160 * scaleFactor
+        let bigSize: CGFloat = 200 * scaleFactor
+
         if settings.isTwoDicesEnabled {
             if !diceStack.arrangedSubviews.contains(dice2) {
                 diceStack.addArrangedSubview(dice2)
             }
             dice2.isHidden = false
-            
-            // Restore normal size for both dice.
-            UIView.animate(withDuration: 0.15) { [self] in
-                dice1.transform = .identity
-                dice2.transform = .identity
+
+            UIView.animate(withDuration: 0.2) {
+                self.dice1WidthConstraint.constant = normalSize
+                self.dice1HeightConstraint.constant = normalSize
+                self.dice2WidthConstraint.constant = normalSize
+                self.dice2HeightConstraint.constant = normalSize
+                self.view.layoutIfNeeded()
             }
-            
+
         } else {
             if diceStack.arrangedSubviews.contains(dice2) {
                 diceStack.removeArrangedSubview(dice2)
                 dice2.removeFromSuperview()
             }
-            
-            // Enlarge single dice.
-            UIView.animate(withDuration: 0.15) {
-                self.dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
+
+            UIView.animate(withDuration: 0.2) {
+                self.dice1WidthConstraint.constant = bigSize
+                self.dice1HeightConstraint.constant = bigSize
+                self.view.layoutIfNeeded()
             }
         }
     }
@@ -868,13 +917,25 @@ extension DiceViewController {
     
     /// Applies size transform to dice based on current settings.
     func applyDiceSizeBasedOnSettings() {
-        if settings.isTwoDicesEnabled {
-            // Two dice: normal size
-            dice1.transform = .identity
-            dice2.transform = .identity
-        } else {
-            // Single dice: enlarged
-            dice1.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
+        let normalSize: CGFloat = 160 * scaleFactor
+        let bigSize: CGFloat = 200 * scaleFactor
+
+        UIView.animate(withDuration: 0.2) {
+            if self.settings.isTwoDicesEnabled {
+                // два кубика — оба нормального размера
+                self.dice1WidthConstraint.constant = normalSize
+                self.dice1HeightConstraint.constant = normalSize
+                self.dice2WidthConstraint.constant = normalSize
+                self.dice2HeightConstraint.constant = normalSize
+            } else {
+                // один кубик — увеличиваем первый
+                self.dice1WidthConstraint.constant = bigSize
+                self.dice1HeightConstraint.constant = bigSize
+                self.dice2WidthConstraint.constant = normalSize
+                self.dice2HeightConstraint.constant = normalSize
+            }
+            
+            self.view.layoutIfNeeded()
         }
     }
 }

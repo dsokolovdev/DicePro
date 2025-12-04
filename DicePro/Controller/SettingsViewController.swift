@@ -84,10 +84,7 @@ extension SettingsViewController {
         }
     }
     
-    override func tableView(
-        _ tableView: UITableView,
-        cellForRowAt indexPath: IndexPath
-    ) -> UITableViewCell {
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = UITableViewCell(style: .default, reuseIdentifier: nil)
         cell.selectionStyle = .none
@@ -96,7 +93,7 @@ extension SettingsViewController {
             return cell
         }
         
-        let size: CGFloat = 16 * scaleFactor
+        let size: CGFloat = 17 * scaleFactor
         
         switch section {
             
@@ -145,15 +142,12 @@ extension SettingsViewController {
             resetButton.sizeToFit()
             cell.accessoryView = resetButton
         }
+        cell.textLabel?.font = .systemFont(ofSize: size)
         
         return cell
     }
     
-    override func tableView(
-        _ tableView: UITableView,
-        titleForHeaderInSection section: Int
-    ) -> String? {
-        
+    override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
         guard let sec = Section(rawValue: section) else { return nil }
         
         switch sec {
